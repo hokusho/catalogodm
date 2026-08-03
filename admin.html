@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Cadastrar Produto | DM-BH</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@400;600;700;900&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
     <header>
         <a href="index.html" class="nav-logo">
@@ -24,7 +28,7 @@
     <main>
         <div class="admin-container">
             <h2 style="margin-bottom: 1.5rem; font-weight: 800;">Adicionar Novo Produto</h2>
-            
+
             <div class="form-group">
                 <label for="productSource">Fonte / Loja do Produto</label>
                 <select id="productSource">
@@ -37,7 +41,8 @@
 
             <div class="form-group">
                 <label for="productUrl">Link do Produto</label>
-                <input type="url" id="productUrl" placeholder="Cole o link da B&H, Amazon ou Compras Paraguai..." required>
+                <input type="url" id="productUrl" placeholder="Cole o link da B&H, Amazon ou Compras Paraguai..."
+                    required>
                 <div class="flex-btn-group">
                     <button class="btn" id="fetchDataBtn">⚡ Buscar Dados Ultra-Rápido</button>
                 </div>
@@ -108,15 +113,19 @@
                 <div class="form-group">
                     <label for="productImage">URL ou Arquivo da Foto (Será convertida em WebP 300px)</label>
                     <input type="text" id="productImage" placeholder="Cole o link da foto..." required>
-                    
+
                     <div style="margin-top: 0.6rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                         <span style="font-size: 0.8rem; color: var(--text-muted);">Ou selecione do computador:</span>
-                        <input type="file" id="productImageFile" accept="image/*" style="font-size: 0.8rem; padding: 0.4rem; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid var(--card-border);">
+                        <input type="file" id="productImageFile" accept="image/*"
+                            style="font-size: 0.8rem; padding: 0.4rem; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid var(--card-border);">
                     </div>
 
-                    <div id="imagePreviewContainer" style="margin-top: 1rem; display: none; text-align: center; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 10px; border: 1px solid var(--card-border);">
-                        <img id="imagePreview" src="" alt="Prévia Otimizada" style="max-height: 180px; width: auto; object-fit: contain; border-radius: 8px; background: #ffffff; padding: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-                        <div id="imagePreviewInfo" style="font-size: 0.75rem; color: var(--primary-color); margin-top: 0.6rem; font-weight: 600;">
+                    <div id="imagePreviewContainer"
+                        style="margin-top: 1rem; display: none; text-align: center; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 10px; border: 1px solid var(--card-border);">
+                        <img id="imagePreview" src="" alt="Prévia Otimizada"
+                            style="max-height: 180px; width: auto; object-fit: contain; border-radius: 8px; background: #ffffff; padding: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                        <div id="imagePreviewInfo"
+                            style="font-size: 0.75rem; color: var(--primary-color); margin-top: 0.6rem; font-weight: 600;">
                             ✨ Foto Convertida em WebP (Altura: 300px)
                         </div>
                     </div>
@@ -133,4 +142,5 @@
     <script src="js/db.js"></script>
     <script src="js/admin.js"></script>
 </body>
+
 </html>
