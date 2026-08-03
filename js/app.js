@@ -16,13 +16,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Constante centralizada do texto de aviso (Modal e Banner fixo)
     const TERMS_TEXT = `
 Esta página trata-se de um <strong style="color: var(--primary-color);">CATÁLOGO DE PREÇOS</strong><br>
-E não de uma loja virtual.<br>
+e não de uma loja virtual.<br>
 
-<strong style="color: var(--primary-color);">Os valores</strong> são carregados de forma automática através dos servidores dos nossos fornecedores,<br> 
-<strong style="color: var(--primary-color);">Portanto podem ser diferentes dos mostrados e não corresponder corretamente ao valor.</strong><br><br>
+Os valores são carregados de forma automática através dos servidores dos nossos fornecedores.<br> 
+<strong style="color: var(--primary-color);">Portanto, OS PREÇOS PODEM SER DIFERENTES DOS MOSTRADOS NA PÁGINA</strong><br><br>
 
-Alguns produtos podem estar disponíveis apenas sob encomenda.<br>
-Os prazos de entrega podem variar de acordo com o produto<br><br>
+Alguns produtos podem estar disponíveis apenas sob encomenda<br>
+os prazos de entrega podem variar de acordo com o produto.<br><br>
 
 <strong style="color: var(--primary-color);">EM CASO DE DÚVIDAS, FALE COM NOSSA EQUIPE.</strong>`;
 
