@@ -135,26 +135,44 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (imgEl) image = imgEl.src;
                     }
                 } else if (url.includes('comprasparaguai.com.br')) {
-                    // O Compras Paraguai tem bons meta tags para Título e Imagem via Open Graph
-                    // Se o preço não for carregado automaticamente, o usuário pode preencher
-                    const metaPrice = doc.querySelector('meta[property="product:price:amount"]');
-                    if (metaPrice) price = metaPrice.getAttribute('content');
+                    // Extração de preço específica para o Compras Paraguai (.header-product-info--price span)
+                    let rawPriceText = '';
+                    const priceSpan = doc.querySelector('.header-product-info--price span') ||
+                                      doc.querySelector('.header-product-info--price') ||
+                                      doc.querySelector('meta[property="product:price:amount"]');
+                    
+                    if (priceSpan) {
+                        rawPriceText = priceSpan.tagName === 'META' ? priceSpan.getAttribute('content') : priceSpan.textContent;
+                    } else {
+                        const spans = Array.from(doc.querySelectorAll('span'));
+                        const usdSpan = spans.find(s => s.textContent.includes('US$'));
+                        if (usdSpan) rawPriceText = usdSpan.textContent;
+                    }
+
+                    if (rawPriceText) {
+                        let clean = rawPriceText.replace(/US\$/i, '').trim();
+                        if (clean.includes(',')) {
+                            clean = clean.replace(/\./g, '').replace(',', '.');
+                        }
+                        const parsed = parseFloat(clean.replace(/[^0-9.]/g, ''));
+                        if (!isNaN(parsed) && parsed > 0) {
+                            price = parsed.toString();
+                        }
+                    }
                 }
             }
 
             // Fallback (Método 2): Microlink API
             if (!title || !image || !price) {
                 try {
-                    // Usando microlink com regras de data scraping para tentar pegar o preço
                     let fallbackUrl = `https://api.microlink.io?url=${encodeURIComponent(url)}`;
                     
-                    // Adiciona regra de preço e imagem se for B&H ou Nissei
                     if (url.includes('bhphotovideo.com')) {
                         fallbackUrl += `&data.price.selector=${encodeURIComponent('[data-selenium="pricingPrice"]')}&data.price.type=text`;
                         fallbackUrl += `&data.priceAlt.selector=${encodeURIComponent('.price_1JN83N22V')}&data.priceAlt.type=text`;
                         fallbackUrl += `&data.img.selector=${encodeURIComponent('img[data-selenium="inlineMediaMainImage"]')}&data.img.attr=src`;
-                    } else if (url.includes('nissei.com')) {
-                        fallbackUrl += `&data.price.selector=${encodeURIComponent('meta[property="product:price:amount"]')}&data.price.attr=content`;
+                    } else if (url.includes('comprasparaguai.com.br')) {
+                        fallbackUrl += `&data.price.selector=${encodeURIComponent('.header-product-info--price span')}&data.price.type=text`;
                     }
                     
                     const fallbackResponse = await fetch(fallbackUrl);
@@ -165,11 +183,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (!image && fallbackData.data.image && fallbackData.data.image.url) image = fallbackData.data.image.url;
                             if (!image && fallbackData.data.img) image = fallbackData.data.img;
                             
-                            // Extrai o preço das regras customizadas
                             if (!price && fallbackData.data.price) {
-                                price = fallbackData.data.price.replace(/[^0-9.]/g, '');
-                            } else if (!price && fallbackData.data.priceAlt) {
-                                price = fallbackData.data.priceAlt.replace(/[^0-9.]/g, '');
+                                let rawP = fallbackData.data.price;
+                                let clean = rawP.replace(/US\$/i, '').trim();
+                                if (clean.includes(',')) {
+                                    clean = clean.replace(/\./g, '').replace(',', '.');
+                                }
+                                const parsed = parseFloat(clean.replace(/[^0-9.]/g, ''));
+                                if (!isNaN(parsed) && parsed > 0) price = parsed.toString();
                             }
                         }
                     }
@@ -177,6 +198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.log("Fallback API falhou.", fallbackErr);
                 }
             }
+
 
             // Limpa sufixos de lojas do título (ex: "na loja Nissei no Paraguai", "| Amazon", etc.)
             function cleanProductTitle(rawTitle) {
