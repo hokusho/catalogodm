@@ -341,6 +341,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateBrands(); // Run once on load
     }
 
+    function resetAdminForm() {
+        if (productForm) productForm.reset();
+        const urlInput = document.getElementById('productUrl');
+        const sourceSelect = document.getElementById('productSource');
+        const fileInput = document.getElementById('productImageFile');
+        const previewContainer = document.getElementById('imagePreviewContainer');
+        const previewImg = document.getElementById('imagePreview');
+
+        if (urlInput) urlInput.value = '';
+        if (sourceSelect) sourceSelect.value = 'auto';
+        if (fileInput) fileInput.value = '';
+        if (previewImg) previewImg.src = '';
+        if (previewContainer) previewContainer.style.display = 'none';
+
+        updatePricePreview();
+    }
+
     if (productForm) {
         productForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -369,15 +386,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 await saveProduct(product);
                 showToast("Produto cadastrado com sucesso no Banco Neon!");
-                productForm.reset();
-                document.getElementById('productUrl').value = '';
-                updatePricePreview();
+                resetAdminForm();
             } catch (saveError) {
                 console.error("Erro ao salvar produto no Neon:", saveError);
             }
 
         });
     }
+
 
 });
 
