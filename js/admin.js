@@ -311,12 +311,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         camera: ['CANON', 'SONY', 'NIKON'],
         lente: ['CANON', 'SONY', 'NIKON', 'SIGMA', 'TAMROM', 'OUTRAS'],
         cartao: ['SANDISK', 'LEXAR'],
-        flash: ['GODOX']
+        flash: ['GODOX'],
+        microfone: ['SEM FIO']
     };
 
     const categorySelect = document.getElementById('productCategory');
     const brandGroup = document.getElementById('brandGroup');
     const brandSelect = document.getElementById('productBrand');
+    const brandGroup2 = document.getElementById('brandGroup2');
+    const brandSelect2 = document.getElementById('productBrand2');
 
     if (categorySelect && brandSelect) {
         const updateBrands = () => {
@@ -324,6 +327,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const brands = subCategories[cat];
             
             brandSelect.innerHTML = '<option value="">(Nenhuma / Não se aplica)</option>';
+            if (brandGroup2) brandGroup2.style.display = 'none';
+            if (brandSelect2) brandSelect2.value = '';
             
             if (brands && brands.length > 0) {
                 brands.forEach(b => {
@@ -340,6 +345,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         categorySelect.addEventListener('change', updateBrands);
         updateBrands(); // Run once on load
+        
+        brandSelect.addEventListener('change', () => {
+            if (brandGroup2 && brandSelect2 && categorySelect.value === 'lente') {
+                const val = brandSelect.value;
+                if (['SIGMA', 'TAMROM', 'OUTRAS'].includes(val)) {
+                    brandSelect2.innerHTML = '<option value="">(Nenhuma / Não se aplica)</option>';
+                    ['CANON', 'SONY', 'NIKON'].forEach(b => {
+                        const opt = document.createElement('option');
+                        opt.value = b;
+                        opt.textContent = b;
+                        brandSelect2.appendChild(opt);
+                    });
+                    brandGroup2.style.display = 'block';
+                } else {
+                    brandGroup2.style.display = 'none';
+                    brandSelect2.value = '';
+                }
+            } else if (brandGroup2 && brandSelect2) {
+                brandGroup2.style.display = 'none';
+                brandSelect2.value = '';
+            }
+        });
     }
 
     function resetAdminForm() {
@@ -349,12 +376,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const fileInput = document.getElementById('productImageFile');
         const previewContainer = document.getElementById('imagePreviewContainer');
         const previewImg = document.getElementById('imagePreview');
+        const bGroup2 = document.getElementById('brandGroup2');
 
         if (urlInput) urlInput.value = '';
         if (sourceSelect) sourceSelect.value = 'auto';
         if (fileInput) fileInput.value = '';
         if (previewImg) previewImg.src = '';
         if (previewContainer) previewContainer.style.display = 'none';
+        if (bGroup2) bGroup2.style.display = 'none';
 
         updatePricePreview();
     }
@@ -366,7 +395,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const url = document.getElementById('productUrl').value;
             const name = document.getElementById('productName').value;
             const category = document.getElementById('productCategory').value;
-            const brand = document.getElementById('productBrand').value;
+            let brand = document.getElementById('productBrand').value;
+            const brand2 = document.getElementById('productBrand2') ? document.getElementById('productBrand2').value : '';
+            if (brand2) {
+                brand = `${brand},${brand2}`;
+            }
             const priceUSD = parseFloat(document.getElementById('productPriceUSD').value);
             const image = document.getElementById('productImage').value;
 

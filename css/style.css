@@ -217,6 +217,7 @@ select option {
     cursor: pointer;
     transition: all 0.3s;
     font-size: 0.9rem;
+    font-weight: 600;
     text-transform: uppercase;
 }
 

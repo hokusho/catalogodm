@@ -7,7 +7,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         camera: ['CANON', 'SONY', 'NIKON'],
         lente: ['CANON', 'SONY', 'NIKON', 'SIGMA', 'TAMROM', 'OUTRAS'],
         cartao: ['SANDISK', 'LEXAR'],
-        flash: ['GODOX']
+        flash: ['GODOX'],
+        microfone: ['SEM FIO']
     };
 
     let currentDollarAPI = 5.00;
@@ -133,11 +134,13 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
         if (currentBrand) {
             filteredProducts = filteredProducts.filter(p => {
                 const name = p.name.toUpperCase();
+                const brandVal = (p.brand || '').toUpperCase();
+                
                 if (currentBrand === 'OUTRAS') {
                     const knownBrands = subCategories[categoryFilter];
-                    return !knownBrands.some(kb => kb !== 'OUTRAS' && name.includes(kb));
+                    return !knownBrands.some(kb => kb !== 'OUTRAS' && (name.includes(kb) || brandVal.includes(kb)));
                 }
-                return name.includes(currentBrand);
+                return name.includes(currentBrand) || brandVal.includes(currentBrand);
             });
         }
 
@@ -270,8 +273,14 @@ function createModalHTML() {
                     </select>
                 </div>
                 <div class="form-group" id="editBrandGroup" style="display: none;">
-                    <label>Marca</label>
+                    <label>Marca / Subcategoria</label>
                     <select id="editBrand">
+                        <option value="">(Nenhuma / Não se aplica)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="editBrandGroup2" style="display: none;">
+                    <label>Compatibilidade / Subcategoria 2</label>
+                    <select id="editBrand2">
                         <option value="">(Nenhuma / Não se aplica)</option>
                     </select>
                 </div>
@@ -426,11 +435,15 @@ function createModalHTML() {
             }
         }
 
+        let brandVal = document.getElementById('editBrand').value;
+        const brandVal2 = document.getElementById('editBrand2') ? document.getElementById('editBrand2').value : '';
+        if (brandVal2) brandVal = `${brandVal},${brandVal2}`;
+
         const updatedData = {
             url,
             name: document.getElementById('editName').value,
             category: document.getElementById('editCategory').value,
-            brand: document.getElementById('editBrand').value,
+            brand: brandVal,
             priceUSD: parseFloat(document.getElementById('editPrice').value),
             image: rawImage
         };
@@ -451,12 +464,16 @@ function openEditModal(product) {
     const catSelect = document.getElementById('editCategory');
     const brandSelect = document.getElementById('editBrand');
     const brandGroup = document.getElementById('editBrandGroup');
+    const brandSelect2 = document.getElementById('editBrand2');
+    const brandGroup2 = document.getElementById('editBrandGroup2');
 
     const updateEditBrands = () => {
         const cat = catSelect.value;
         const brands = subCategories[cat];
 
         brandSelect.innerHTML = '<option value="">(Nenhuma / Não se aplica)</option>';
+        if (brandGroup2) brandGroup2.style.display = 'none';
+        if (brandSelect2) brandSelect2.value = '';
 
         if (brands && brands.length > 0) {
             brands.forEach(b => {
@@ -474,6 +491,29 @@ function openEditModal(product) {
     // Attach event listener only if not attached
     if (!catSelect.dataset.listenerAttached) {
         catSelect.addEventListener('change', updateEditBrands);
+        
+        brandSelect.addEventListener('change', () => {
+            if (brandGroup2 && brandSelect2 && catSelect.value === 'lente') {
+                const val = brandSelect.value;
+                if (['SIGMA', 'TAMROM', 'OUTRAS'].includes(val)) {
+                    brandSelect2.innerHTML = '<option value="">(Nenhuma / Não se aplica)</option>';
+                    ['CANON', 'SONY', 'NIKON'].forEach(b => {
+                        const opt = document.createElement('option');
+                        opt.value = b;
+                        opt.textContent = b;
+                        brandSelect2.appendChild(opt);
+                    });
+                    brandGroup2.style.display = 'block';
+                } else {
+                    brandGroup2.style.display = 'none';
+                    brandSelect2.value = '';
+                }
+            } else if (brandGroup2 && brandSelect2) {
+                brandGroup2.style.display = 'none';
+                brandSelect2.value = '';
+            }
+        });
+        
         catSelect.dataset.listenerAttached = 'true';
     }
 
@@ -483,7 +523,20 @@ function openEditModal(product) {
     document.getElementById('editCategory').value = product.category;
 
     updateEditBrands();
-    document.getElementById('editBrand').value = product.brand || '';
+    
+    let dbBrand = product.brand || '';
+    let dbBrand2 = '';
+    if (dbBrand.includes(',')) {
+        const parts = dbBrand.split(',');
+        dbBrand = parts[0];
+        dbBrand2 = parts[1];
+    }
+    
+    document.getElementById('editBrand').value = dbBrand;
+    brandSelect.dispatchEvent(new Event('change'));
+    if (brandSelect2 && dbBrand2) {
+        brandSelect2.value = dbBrand2;
+    }
 
     document.getElementById('editPrice').value = product.priceUSD;
     document.getElementById('editImage').value = product.image;
