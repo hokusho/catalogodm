@@ -1,12 +1,12 @@
-import { PrismaClient } from '@prisma/client';
+const { PrismaClient } = require('@prisma/client');
 
 const globalForPrisma = globalThis;
 const prisma = globalForPrisma.prisma || new PrismaClient();
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     // CORS headers
-    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.setHeader(
@@ -89,4 +89,4 @@ export default async function handler(req, res) {
         console.error('API Error:', error);
         return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
     }
-}
+};

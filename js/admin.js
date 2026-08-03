@@ -178,6 +178,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
+            // Limpa sufixos de lojas do título (ex: "na loja Nissei no Paraguai", "| Amazon", etc.)
+            function cleanProductTitle(rawTitle) {
+                if (!rawTitle) return '';
+                let clean = rawTitle.trim();
+                clean = clean.replace(/\s+na\s+loja\s+.*$/i, '');
+                clean = clean.replace(/\s+no\s+Paraguai.*$/i, '');
+                clean = clean.replace(/\s*[-|:]\s*(Compras Paraguai|Amazon|B&H Photo Video|B&H).*$/i, '');
+                return clean.trim();
+            }
+
+            if (title) title = cleanProductTitle(title);
+
             // Preenche os campos se encontrou
             if (title) document.getElementById('productName').value = title;
             if (price) document.getElementById('productPriceUSD').value = parseFloat(price).toFixed(2);
@@ -195,6 +207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 showToast("Erro ao processar dados da página. Preencha manualmente.", true);
             }
+
 
             updatePricePreview();
 
