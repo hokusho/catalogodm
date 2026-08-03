@@ -392,8 +392,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
         });
-    }
-
+    // Bloqueia envio do formulário ou disparo ao pressionar ENTER nos inputs
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.target && e.target.tagName === 'INPUT') {
+            e.preventDefault();
+            return false;
+        }
+    });
 
 });
+
 

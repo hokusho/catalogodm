@@ -276,9 +276,39 @@ function createModalHTML() {
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Origem / Regra de Cálculo de Preço</label>
+                    <select id="editRule">
+                        <option value="standard">Preços US (Amazon / B&H Photo)</option>
+                        <option value="paraguai">Compras Paraguai (MS)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label>Preço Base (USD)</label>
                     <input type="number" step="0.01" id="editPrice" required>
                 </div>
+
+                <!-- Painel de Prévia do Preço Calculado (Edição) -->
+                <div class="price-preview-container" id="editPricePreviewContainer" style="margin: 1rem 0;">
+                    <div class="price-preview-header">
+                        <span>Prévia de Preço Final (Edição)</span>
+                        <span id="editPreviewDollarRate" class="dollar-tag">Dólar API: R$ --</span>
+                    </div>
+                    <div class="price-preview-grid">
+                        <div class="preview-card highlight">
+                            <span class="preview-label">Preço Recibo (SN)</span>
+                            <span class="preview-value" id="editPreviewPriceSN">R$ 0,00</span>
+                        </div>
+                        <div class="preview-card">
+                            <span class="preview-label">Preço Nota Fiscal (NF)</span>
+                            <span class="preview-value" id="editPreviewPriceNF">R$ 0,00</span>
+                        </div>
+                    </div>
+                    <div class="preview-footer">
+                        <span>Regra Aplicada: <strong id="editPreviewRuleText">Padrão</strong></span>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label>URL ou Arquivo da Foto (Convertida para 300px WebP)</label>
                     <input type="text" id="editImage" required>
@@ -302,6 +332,43 @@ function createModalHTML() {
     document.getElementById('closeModalBtn').addEventListener('click', () => {
         modal.classList.remove('active');
     });
+
+    // Atualização em tempo real dos preços no Modal de Edição
+    function updateEditPricePreview() {
+        const priceInput = document.getElementById('editPrice');
+        const ruleSelect = document.getElementById('editRule');
+        const priceSNEl = document.getElementById('editPreviewPriceSN');
+        const priceNFEl = document.getElementById('editPreviewPriceNF');
+        const dollarRateEl = document.getElementById('editPreviewDollarRate');
+        const ruleTextEl = document.getElementById('editPreviewRuleText');
+
+        if (!priceInput || !priceSNEl || !priceNFEl) return;
+
+        if (dollarRateEl && currentDollarAPI) {
+            dollarRateEl.textContent = `Dólar API: R$ ${currentDollarAPI.toFixed(2).replace('.', ',')}`;
+        }
+
+        const priceUSD = parseFloat(priceInput.value);
+        const ruleVal = ruleSelect ? ruleSelect.value : 'standard';
+        const virtualUrl = (ruleVal === 'paraguai') ? 'comprasparaguai.com.br' : 'bhphotovideo.com';
+
+        const prices = calculatePrices(priceUSD, virtualUrl, currentDollarAPI);
+
+        priceSNEl.textContent = prices.sn;
+        priceNFEl.textContent = prices.nf;
+        if (ruleTextEl) ruleTextEl.textContent = prices.rule;
+    }
+
+    const editPriceInput = document.getElementById('editPrice');
+    const editRuleSelect = document.getElementById('editRule');
+
+    if (editPriceInput) {
+        editPriceInput.addEventListener('input', updateEditPricePreview);
+        editPriceInput.addEventListener('change', updateEditPricePreview);
+    }
+    if (editRuleSelect) {
+        editRuleSelect.addEventListener('change', updateEditPricePreview);
+    }
 
     const editImageFileInput = document.getElementById('editImageFile');
     const editImageInput = document.getElementById('editImage');
@@ -345,8 +412,18 @@ function createModalHTML() {
             rawImage = await downloadAndOptimizeImage(rawImage);
         }
 
+        let url = document.getElementById('editUrl').value;
+        const selectedRule = document.getElementById('editRule').value;
+
+        // Garante que o cálculo permaneça persistente de acordo com a regra escolhida
+        if (selectedRule === 'paraguai' && (!url || !url.includes('comprasparaguai'))) {
+            url = 'https://comprasparaguai.com.br/' + (url ? url.replace(/^https?:\/\//, '') : '');
+        } else if (selectedRule === 'standard' && url && url.includes('comprasparaguai')) {
+            url = 'https://bhphotovideo.com/c/product/' + url.replace(/[^a-zA-Z0-9]/g, '');
+        }
+
         const updatedData = {
-            url: document.getElementById('editUrl').value,
+            url,
             name: document.getElementById('editName').value,
             category: document.getElementById('editCategory').value,
             brand: document.getElementById('editBrand').value,
@@ -360,6 +437,7 @@ function createModalHTML() {
         await renderProducts(getCurrentCategory());
     });
 }
+
 
 
 function openEditModal(product) {
@@ -405,13 +483,29 @@ function openEditModal(product) {
     document.getElementById('editPrice').value = product.priceUSD;
     document.getElementById('editImage').value = product.image;
     
+    const editRuleSelect = document.getElementById('editRule');
+    if (editRuleSelect) {
+        if (product.url && product.url.includes('comprasparaguai')) {
+            editRuleSelect.value = 'paraguai';
+        } else {
+            editRuleSelect.value = 'standard';
+        }
+    }
+
     const editPreviewImg = document.getElementById('editImagePreview');
     if (editPreviewImg) {
         editPreviewImg.src = product.image;
     }
 
+    // Dispara atualização inicial da conversão de preço
+    const editPriceInput = document.getElementById('editPrice');
+    if (editPriceInput) {
+        editPriceInput.dispatchEvent(new Event('input'));
+    }
+
     document.getElementById('editModal').classList.add('active');
 }
+
 
 
 // Filter Logic
