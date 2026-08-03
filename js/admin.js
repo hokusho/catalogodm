@@ -191,16 +191,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (title) title = cleanProductTitle(title);
 
             // Preenche os campos se encontrou
-            if (title) document.getElementById('productName').value = title;
-            if (price) document.getElementById('productPriceUSD').value = parseFloat(price).toFixed(2);
-            if (image) document.getElementById('productImage').value = image;
+            if (image) {
+                const optimizedImage = await downloadAndOptimizeImage(image);
+                document.getElementById('productImage').value = optimizedImage;
+                const previewImg = document.getElementById('imagePreview');
+                const previewContainer = document.getElementById('imagePreviewContainer');
+                if (previewImg) previewImg.src = optimizedImage;
+                if (previewContainer) previewContainer.style.display = 'block';
+            }
+
             if (title || image || price) {
                 if (title) document.getElementById('productName').value = title;
-                if (image) document.getElementById('productImage').value = image;
                 if (price) document.getElementById('productPriceUSD').value = parseFloat(price).toFixed(2);
                 
                 if (title && image && price) {
-                    showToast("Dados encontrados com sucesso!", false);
+                    showToast("Dados e imagem 300px WebP processados com sucesso!", false);
                 } else {
                     showToast("Alguns dados não foram encontrados. Por favor, preencha o restante manualmente.", false);
                 }
@@ -208,13 +213,53 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showToast("Erro ao processar dados da página. Preencha manualmente.", true);
             }
 
-
             updatePricePreview();
 
             loader.style.display = 'none';
             fetchBtn.disabled = false;
         });
     }
+
+    const imageInput = document.getElementById('productImage');
+    const imageFileInput = document.getElementById('productImageFile');
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const previewImg = document.getElementById('imagePreview');
+
+    async function processAndPreviewImage(source) {
+        if (!source) {
+            if (previewContainer) previewContainer.style.display = 'none';
+            return '';
+        }
+        showToast("Otimizando imagem para WebP 300px...");
+        const optimizedWebP = await downloadAndOptimizeImage(source);
+        if (imageInput) imageInput.value = optimizedWebP;
+        if (previewImg) previewImg.src = optimizedWebP;
+        if (previewContainer) previewContainer.style.display = 'block';
+        return optimizedWebP;
+    }
+
+    if (imageFileInput) {
+        imageFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    await processAndPreviewImage(event.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    if (imageInput) {
+        imageInput.addEventListener('change', async (e) => {
+            const val = e.target.value;
+            if (val && !val.startsWith('data:image/webp')) {
+                await processAndPreviewImage(val);
+            }
+        });
+    }
+
 
     const subCategories = {
         camera: ['CANON', 'SONY', 'NIKON'],

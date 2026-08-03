@@ -280,8 +280,15 @@ function createModalHTML() {
                     <input type="number" step="0.01" id="editPrice" required>
                 </div>
                 <div class="form-group">
-                    <label>URL da Foto</label>
-                    <input type="url" id="editImage" required>
+                    <label>URL ou Arquivo da Foto (Convertida para 300px WebP)</label>
+                    <input type="text" id="editImage" required>
+                    <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">Trocar por foto do computador:</span>
+                        <input type="file" id="editImageFile" accept="image/*" style="font-size: 0.8rem; padding: 0.3rem;">
+                    </div>
+                    <div id="editImagePreviewContainer" style="margin-top: 0.8rem; text-align: center; background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 8px; border: 1px solid var(--card-border);">
+                        <img id="editImagePreview" src="" alt="Prévia" style="max-height: 150px; width: auto; object-fit: contain; border-radius: 6px; background: #fff; padding: 4px;">
+                    </div>
                 </div>
                 <div class="flex-btn-group">
                     <button type="button" class="btn btn-secondary" id="closeModalBtn">Cancelar</button>
@@ -296,16 +303,55 @@ function createModalHTML() {
         modal.classList.remove('active');
     });
 
+    const editImageFileInput = document.getElementById('editImageFile');
+    const editImageInput = document.getElementById('editImage');
+    const editPreviewImg = document.getElementById('editImagePreview');
+
+    if (editImageFileInput) {
+        editImageFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    showToast("Otimizando nova foto para WebP 300px...");
+                    const webp = await downloadAndOptimizeImage(event.target.result);
+                    if (editImageInput) editImageInput.value = webp;
+                    if (editPreviewImg) editPreviewImg.src = webp;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    if (editImageInput) {
+        editImageInput.addEventListener('change', async (e) => {
+            const val = e.target.value;
+            if (val && !val.startsWith('data:image/webp')) {
+                showToast("Otimizando imagem para WebP 300px...");
+                const webp = await downloadAndOptimizeImage(val);
+                editImageInput.value = webp;
+                if (editPreviewImg) editPreviewImg.src = webp;
+            }
+        });
+    }
+
     document.getElementById('editForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('editId').value;
+        let rawImage = document.getElementById('editImage').value;
+        
+        if (rawImage && !rawImage.startsWith('data:image/webp')) {
+            showToast("Otimizando imagem antes de salvar...");
+            rawImage = await downloadAndOptimizeImage(rawImage);
+        }
+
         const updatedData = {
             url: document.getElementById('editUrl').value,
             name: document.getElementById('editName').value,
             category: document.getElementById('editCategory').value,
             brand: document.getElementById('editBrand').value,
             priceUSD: parseFloat(document.getElementById('editPrice').value),
-            image: document.getElementById('editImage').value
+            image: rawImage
         };
 
         await updateProduct(id, updatedData);
@@ -358,9 +404,15 @@ function openEditModal(product) {
 
     document.getElementById('editPrice').value = product.priceUSD;
     document.getElementById('editImage').value = product.image;
+    
+    const editPreviewImg = document.getElementById('editImagePreview');
+    if (editPreviewImg) {
+        editPreviewImg.src = product.image;
+    }
 
     document.getElementById('editModal').classList.add('active');
 }
+
 
 // Filter Logic
 filterBtns.forEach(btn => {

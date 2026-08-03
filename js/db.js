@@ -167,3 +167,88 @@ function calculatePrices(priceUSD, url, dollarRate) {
     };
 }
 
+// Global Image Downloader & 300px WebP Optimizer
+async function downloadAndOptimizeImage(imageUrl) {
+    if (!imageUrl) return '';
+
+    let blob = null;
+
+    if (imageUrl.startsWith('data:')) {
+        try {
+            const res = await fetch(imageUrl);
+            blob = await res.blob();
+        } catch (e) {
+            console.log("Erro ao converter data URL para blob:", e);
+        }
+    } else {
+        // Tenta baixar via CORS proxy
+        try {
+            const corsUrl = `https://corsproxy.io/?${encodeURIComponent(imageUrl)}`;
+            const res = await fetch(corsUrl);
+            if (res.ok) {
+                blob = await res.blob();
+            }
+        } catch (e) {
+            console.log("Corsproxy falhou para imagem, tentando fetch direto...", e);
+        }
+
+        if (!blob) {
+            try {
+                const res = await fetch(imageUrl);
+                if (res.ok) blob = await res.blob();
+            } catch (e) {
+                console.log("Fetch direto da imagem falhou:", e);
+            }
+        }
+    }
+
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+
+        const processCanvas = () => {
+            try {
+                const targetHeight = 300;
+                const aspect = (img.width && img.height) ? (img.width / img.height) : 1;
+                const targetWidth = Math.round(targetHeight * aspect);
+
+                const canvas = document.createElement('canvas');
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+                let webpUrl = canvas.toDataURL('image/webp', 0.82);
+                if (!webpUrl.startsWith('data:image/webp')) {
+                    webpUrl = canvas.toDataURL('image/jpeg', 0.82);
+                }
+                resolve(webpUrl);
+            } catch (err) {
+                console.warn("Erro ao processar canvas da imagem, usando URL original:", err);
+                resolve(imageUrl);
+            }
+        };
+
+        if (blob) {
+            const objectUrl = URL.createObjectURL(blob);
+            img.onload = () => {
+                URL.revokeObjectURL(objectUrl);
+                processCanvas();
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                resolve(imageUrl);
+            };
+            img.src = objectUrl;
+        } else {
+            img.onload = processCanvas;
+            img.onerror = () => resolve(imageUrl);
+            img.src = imageUrl;
+        }
+    });
+}
+
+
