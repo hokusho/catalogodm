@@ -276,11 +276,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 image
             };
 
-            await saveProduct(product);
-            showToast("Produto cadastrado com sucesso!");
-            productForm.reset();
-            document.getElementById('productUrl').value = '';
-            updatePricePreview();
+            try {
+                await saveProduct(product);
+                showToast("Produto cadastrado com sucesso no Banco Neon!");
+                productForm.reset();
+                document.getElementById('productUrl').value = '';
+                updatePricePreview();
+            } catch (saveError) {
+                console.error("Erro ao salvar produto no Neon:", saveError);
+            }
+
         });
     }
 

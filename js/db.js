@@ -1,22 +1,23 @@
-// Database Utility with API / Prisma Serverless integration & LocalStorage Fallback
-const DB_KEY = 'dmbh_products';
+// Strict API Database Utility - Direct connection to Vercel/Prisma/Neon API
 const API_URL = '/api/products';
 
 async function getProducts() {
     try {
         const response = await fetch(API_URL);
-        if (response.ok) {
-            const data = await response.json();
-            if (Array.isArray(data)) {
-                localStorage.setItem(DB_KEY, JSON.stringify(data));
-                return data;
-            }
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const msg = errorData.error || `HTTP ${response.status} ${response.statusText}`;
+            showToast(`Erro Banco Neon (GET): ${msg}`, true);
+            console.error("Erro ao buscar produtos do Neon:", msg);
+            return [];
         }
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
     } catch (err) {
-        console.warn("API /api/products indisponível, usando cache local:", err);
+        showToast(`Erro Conexão API: ${err.message}`, true);
+        console.error("Erro na conexão com API:", err);
+        return [];
     }
-    const data = localStorage.getItem(DB_KEY);
-    return data ? JSON.parse(data) : [];
 }
 
 async function saveProduct(product) {
@@ -26,24 +27,20 @@ async function saveProduct(product) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(product)
         });
-        if (response.ok) {
-            const saved = await response.json();
-            const products = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
-            products.push(saved);
-            localStorage.setItem(DB_KEY, JSON.stringify(products));
-            return saved;
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const msg = errorData.error || `HTTP ${response.status} ${response.statusText}`;
+            showToast(`ERRO BANCO NEON: ${msg}`, true);
+            throw new Error(`Falha ao salvar no Neon: ${msg}`);
         }
+        
+        const saved = await response.json();
+        return saved;
     } catch (err) {
-        console.warn("Falha ao salvar via API, salvando localmente:", err);
+        showToast(`ERRO CONEXÃO API: ${err.message}`, true);
+        throw err;
     }
-
-    const products = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
-    if (!product.id) {
-        product.id = Date.now().toString();
-    }
-    products.push(product);
-    localStorage.setItem(DB_KEY, JSON.stringify(products));
-    return product;
 }
 
 async function deleteProduct(id) {
@@ -51,20 +48,19 @@ async function deleteProduct(id) {
         const response = await fetch(`${API_URL}?id=${encodeURIComponent(id)}`, {
             method: 'DELETE'
         });
-        if (response.ok) {
-            const products = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
-            const updated = products.filter(p => String(p.id) !== String(id));
-            localStorage.setItem(DB_KEY, JSON.stringify(updated));
-            return true;
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const msg = errorData.error || `HTTP ${response.status} ${response.statusText}`;
+            showToast(`ERRO BANCO NEON: ${msg}`, true);
+            throw new Error(`Falha ao remover no Neon: ${msg}`);
         }
+        
+        return true;
     } catch (err) {
-        console.warn("Falha ao remover via API, removendo localmente:", err);
+        showToast(`ERRO CONEXÃO API: ${err.message}`, true);
+        throw err;
     }
-
-    const products = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
-    const updated = products.filter(p => String(p.id) !== String(id));
-    localStorage.setItem(DB_KEY, JSON.stringify(updated));
-    return true;
 }
 
 async function updateProduct(id, updatedData) {
@@ -74,27 +70,22 @@ async function updateProduct(id, updatedData) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, ...updatedData })
         });
-        if (response.ok) {
-            const updated = await response.json();
-            const products = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
-            const index = products.findIndex(p => String(p.id) === String(id));
-            if (index !== -1) {
-                products[index] = { ...products[index], ...updatedData };
-                localStorage.setItem(DB_KEY, JSON.stringify(products));
-            }
-            return updated;
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const msg = errorData.error || `HTTP ${response.status} ${response.statusText}`;
+            showToast(`ERRO BANCO NEON: ${msg}`, true);
+            throw new Error(`Falha ao atualizar no Neon: ${msg}`);
         }
+        
+        const updated = await response.json();
+        return updated;
     } catch (err) {
-        console.warn("Falha ao atualizar via API, atualizando localmente:", err);
-    }
-
-    const products = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
-    const index = products.findIndex(p => String(p.id) === String(id));
-    if (index !== -1) {
-        products[index] = { ...products[index], ...updatedData };
-        localStorage.setItem(DB_KEY, JSON.stringify(products));
+        showToast(`ERRO CONEXÃO API: ${err.message}`, true);
+        throw err;
     }
 }
+
 
 
 // Global Toast Notification
