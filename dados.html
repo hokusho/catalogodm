@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Dados | DM-BH</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body data-page="dados">
+    <header>
+        <h1>DM </h1>
+        <div class="nav-links">
+            <a href="index.html" target="_blank">Ver Catálogo</a>
+            <a href="admin.html">Cadastrar</a>
+            <a href="dados.html" class="active">Gerenciar</a>
+        </div>
+    </header>
+
+    <main>
+        <div class="filters">
+            <div class="filter-group" id="category-filters">
+                <button class="filter-btn active" data-category="all">Todos</button>
+                <button class="filter-btn" data-category="camera">Câmeras</button>
+                <button class="filter-btn" data-category="lente">Lentes</button>
+                <button class="filter-btn" data-category="cartao">Cartões</button>
+                <button class="filter-btn" data-category="flash">Flash</button>
+                <button class="filter-btn" data-category="outro">Outros</button>
+            </div>
+            <div class="dollar-rate" id="dollar-display">
+                Cotação Dólar: Carregando...
+            </div>
+        </div>
+
+        <div class="products-grid" id="products-grid">
+            <!-- Products will be injected here via JS -->
+        </div>
+    </main>
+
+    <div id="toast"></div>
+
+    <script src="js/db.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

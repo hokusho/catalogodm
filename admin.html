@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Cadastrar Produto | DM-BH</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>DM<span>BH</span> Admin</h1>
+        <div class="nav-links">
+            <a href="index.html" target="_blank">Ver Catálogo</a>
+            <a href="admin.html" class="active">Cadastrar</a>
+            <a href="dados.html">Gerenciar</a>
+        </div>
+    </header>
+
+    <main>
+        <div class="admin-container">
+            <h2 style="margin-bottom: 1.5rem; font-weight: 800;">Adicionar Novo Produto</h2>
+            
+            <div class="form-group">
+                <label for="productUrl">Link do Produto (B&H Photo ou Amazon)</label>
+                <input type="url" id="productUrl" placeholder="Cole o link aqui..." required>
+                <div class="flex-btn-group">
+                    <button class="btn" id="fetchDataBtn">Buscar Dados Automaticamente</button>
+                </div>
+                <div id="fetchLoader" class="loader" style="margin-top: 1rem;"></div>
+            </div>
+
+            <hr style="border-color: var(--card-border); margin: 2rem 0;">
+
+            <form id="productForm">
+                <div class="form-group">
+                    <label for="productName">Nome do Produto</label>
+                    <input type="text" id="productName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="productCategory">Categoria</label>
+                    <select id="productCategory" required>
+                        <option value="camera">Câmera</option>
+                        <option value="lente">Lente</option>
+                        <option value="cartao">Cartão de Memória</option>
+                        <option value="flash">Flash</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="productPriceUSD">Preço Base (USD - B&H / Amazon)</label>
+                    <input type="number" id="productPriceUSD" step="0.01" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="productImage">URL da Foto</label>
+                    <input type="url" id="productImage" required>
+                </div>
+
+                <button type="submit" class="btn">Salvar Produto</button>
+            </form>
+        </div>
+    </main>
+
+    <div id="toast"></div>
+
+    <script src="js/db.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo de Preços | DM</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body data-page="catalog">
+    <header>
+        <h1>DM Catálogo</h1>
+        <!-- Removido o menu superior -->
+    </header>
+
+    <main>
+        <div class="filters">
+            <div class="filter-group" id="category-filters">
+                <button class="filter-btn active" data-category="all">Todos</button>
+                <button class="filter-btn" data-category="camera">Câmeras</button>
+                <button class="filter-btn" data-category="lente">Lentes</button>
+                <button class="filter-btn" data-category="cartao">Cartões</button>
+                <button class="filter-btn" data-category="flash">Flash</button>
+                <button class="filter-btn" data-category="outro">Outros</button>
+            </div>
+            <!-- Removida a cotação do dólar -->
+        </div>
+
+        <div class="products-grid" id="products-grid">
+            <!-- Products will be injected here via JS -->
+        </div>
+    </main>
+
+    <script src="js/db.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
