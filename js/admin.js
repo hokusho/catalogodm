@@ -85,6 +85,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const res = await fetchWithTimeout(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`);
                 const html = await res.text();
                 return new DOMParser().parseFromString(html, 'text/html');
+            },
+            async () => {
+                const res = await fetchWithTimeout(`https://cors.eu.org/${targetUrl}`);
+                const html = await res.text();
+                return new DOMParser().parseFromString(html, 'text/html');
             }
         ];
 
@@ -231,6 +236,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
+            // Fallback (Método 3): Dub.co API para Título e Imagem (Útil quando Microlink dá 429 Rate Limit)
+            if (!title || !image) {
+                try {
+                    const dubUrl = `https://api.dub.co/metatags?url=${encodeURIComponent(url)}`;
+                    const dubRes = await fetch(dubUrl);
+                    if (dubRes.ok) {
+                        const dubData = await dubRes.json();
+                        if (!title && dubData.title) title = dubData.title;
+                        if (!image && dubData.image) image = dubData.image;
+                    }
+                } catch (dubErr) {
+                    console.log("Dub API falhou.", dubErr);
+                }
+            }
+
 
             // Limpa sufixos de lojas do título (ex: "na loja Nissei no Paraguai", "| Amazon", etc.)
             function cleanProductTitle(rawTitle) {
@@ -256,16 +276,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (title || image || price) {
                 if (title) document.getElementById('productName').value = title;
-                if (price) document.getElementById('productPriceUSD').value = parseFloat(price).toFixed(2);
-                
-                if (title && image && price) {
-                    showToast("Dados e imagem 300px WebP processados com sucesso!", false);
+                if (price) {
+                    document.getElementById('productPriceUSD').value = parseFloat(price).toFixed(2);
+                    document.getElementById('productPriceUSD').dispatchEvent(new Event('input'));
+                    showToast("Dados preenchidos com sucesso!", false);
                 } else {
-                    showToast("Alguns dados não foram encontrados. Por favor, preencha o restante manualmente.", false);
+                    showToast("Produto encontrado! Como o preço estava bloqueado pelo anti-robô, preencha o valor base manualmente.", false);
                 }
             } else {
                 showToast("Erro ao processar dados da página. Preencha manualmente.", true);
             }
+        } catch (error) {
+            showToast("Erro ao processar dados da página. Preencha manualmente.", true);
+        }
 
             updatePricePreview();
 
