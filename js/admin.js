@@ -21,9 +21,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const priceUSD = parseFloat(priceInput.value);
-        const url = urlInput ? urlInput.value : '';
+        let urlForCalc = urlInput ? urlInput.value : '';
 
-        const prices = calculatePrices(priceUSD, url, currentDollarAPI);
+        const ruleRadios = document.getElementsByName('calcRule');
+        if (ruleRadios && ruleRadios.length > 0) {
+            const selectedRule = Array.from(ruleRadios).find(r => r.checked)?.value;
+            if (selectedRule === 'paraguai') {
+                urlForCalc = 'https://comprasparaguai.com.br';
+            } else {
+                urlForCalc = 'https://bhphotovideo.com';
+            }
+        }
+
+        const prices = calculatePrices(priceUSD, urlForCalc, currentDollarAPI);
 
         priceSNEl.textContent = prices.sn;
         priceNFEl.textContent = prices.nf;
@@ -43,14 +53,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         urlInput.addEventListener('input', updatePricePreview);
         urlInput.addEventListener('change', updatePricePreview);
     }
-    const sourceSelect = document.getElementById('productSource');
-    if (urlInput && sourceSelect) {
+    const ruleRadios = document.getElementsByName('calcRule');
+    if (ruleRadios && ruleRadios.length > 0) {
+        ruleRadios.forEach(radio => {
+            radio.addEventListener('change', updatePricePreview);
+        });
+    }
+
+    if (urlInput && ruleRadios && ruleRadios.length > 0) {
         urlInput.addEventListener('input', () => {
             const val = urlInput.value.toLowerCase();
-            if (val.includes('bhphotovideo.com')) sourceSelect.value = 'bh';
-            else if (val.includes('amazon.')) sourceSelect.value = 'amazon';
-            else if (val.includes('comprasparaguai.com.br')) sourceSelect.value = 'comprasparaguai';
-            else sourceSelect.value = 'auto';
+            if (val.includes('comprasparaguai.com.br')) {
+                ruleRadios[1].checked = true;
+            } else if (val) {
+                ruleRadios[0].checked = true;
+            }
+            updatePricePreview();
         });
     }
 
@@ -237,20 +255,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // Fallback (Método 3): Dub.co API para Título e Imagem (Útil quando Microlink dá 429 Rate Limit)
-            if (!title || !image) {
-                try {
-                    const dubUrl = `https://api.dub.co/metatags?url=${encodeURIComponent(url)}`;
-                    const dubRes = await fetch(dubUrl);
-                    if (dubRes.ok) {
-                        const dubData = await dubRes.json();
-                        if (!title && dubData.title) title = dubData.title;
-                        if (!image && dubData.image) image = dubData.image;
+                // Fallback (Método 3): JSONLink API para Título e Imagem
+                if (!title || !image) {
+                    try {
+                        const jsonlinkUrl = `https://jsonlink.io/api/extract?url=${encodeURIComponent(url)}`;
+                        const jlRes = await fetch(jsonlinkUrl);
+                        if (jlRes.ok) {
+                            const jlData = await jlRes.json();
+                            if (!title && jlData.title) title = jlData.title;
+                            if (!image && jlData.image) image = jlData.image;
+                        }
+                    } catch (jlErr) {
+                        console.log("JSONLink API falhou.", jlErr);
                     }
-                } catch (dubErr) {
-                    console.log("Dub API falhou.", dubErr);
                 }
-            }
 
 
             // Limpa sufixos de lojas do título (ex: "na loja Nissei no Paraguai", "| Amazon", etc.)
@@ -404,18 +422,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     function resetAdminForm() {
         if (productForm) productForm.reset();
         const urlInput = document.getElementById('productUrl');
-        const sourceSelect = document.getElementById('productSource');
         const fileInput = document.getElementById('productImageFile');
         const previewContainer = document.getElementById('imagePreviewContainer');
         const previewImg = document.getElementById('imagePreview');
         const bGroup2 = document.getElementById('brandGroup2');
+        const ruleRadios = document.getElementsByName('calcRule');
 
         if (urlInput) urlInput.value = '';
-        if (sourceSelect) sourceSelect.value = 'auto';
         if (fileInput) fileInput.value = '';
         if (previewImg) previewImg.src = '';
         if (previewContainer) previewContainer.style.display = 'none';
         if (bGroup2) bGroup2.style.display = 'none';
+        if (ruleRadios && ruleRadios.length > 0) ruleRadios[0].checked = true;
 
         updatePricePreview();
     }

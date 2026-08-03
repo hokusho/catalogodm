@@ -29,15 +29,7 @@
         <div class="admin-container">
             <h2 style="margin-bottom: 1.5rem; font-weight: 800;">Adicionar Novo Produto</h2>
 
-            <div class="form-group">
-                <label for="productSource">Fonte / Loja do Produto</label>
-                <select id="productSource">
-                    <option value="auto">⚡ Auto-Detectar pelo Link (Mais Rápido)</option>
-                    <option value="bh">B&H Photo Video (US-BH)</option>
-                    <option value="amazon">Amazon (US-AM)</option>
-                    <option value="comprasparaguai">Compras Paraguai (MS)</option>
-                </select>
-            </div>
+
 
             <div class="form-group">
                 <label for="productUrl">Link do Produto</label>
@@ -82,6 +74,20 @@
                     <select id="productBrand2">
                         <option value="">(Nenhuma / Não se aplica)</option>
                     </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Regra de Cálculo</label>
+                    <div style="display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem;">
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
+                            <input type="radio" name="calcRule" value="standard" checked>
+                            US (Amazon / B&H)
+                        </label>
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
+                            <input type="radio" name="calcRule" value="paraguai">
+                            MS (Compras Paraguai)
+                        </label>
+                    </div>
                 </div>
 
                 <div class="form-group">
