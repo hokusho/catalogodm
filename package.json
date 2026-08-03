@@ -1,0 +1,15 @@
+{
+  "name": "catalogodm",
+  "version": "1.0.0",
+  "description": "Catálogo DM Photo com Vercel e Prisma",
+  "main": "index.js",
+  "scripts": {
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  }
+}

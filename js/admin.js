@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (productForm) {
-        productForm.addEventListener('submit', (e) => {
+        productForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const url = document.getElementById('productUrl').value;
@@ -263,12 +263,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 image
             };
 
-            saveProduct(product);
+            await saveProduct(product);
             showToast("Produto cadastrado com sucesso!");
             productForm.reset();
             document.getElementById('productUrl').value = '';
             updatePricePreview();
         });
     }
+
 });
 

@@ -1,34 +1,101 @@
-// Database Utility for LocalStorage
+// Database Utility with API / Prisma Serverless integration & LocalStorage Fallback
 const DB_KEY = 'dmbh_products';
+const API_URL = '/api/products';
 
-function getProducts() {
+async function getProducts() {
+    try {
+        const response = await fetch(API_URL);
+        if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data)) {
+                localStorage.setItem(DB_KEY, JSON.stringify(data));
+                return data;
+            }
+        }
+    } catch (err) {
+        console.warn("API /api/products indisponível, usando cache local:", err);
+    }
     const data = localStorage.getItem(DB_KEY);
     return data ? JSON.parse(data) : [];
 }
 
-function saveProduct(product) {
-    const products = getProducts();
+async function saveProduct(product) {
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(product)
+        });
+        if (response.ok) {
+            const saved = await response.json();
+            const products = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+            products.push(saved);
+            localStorage.setItem(DB_KEY, JSON.stringify(products));
+            return saved;
+        }
+    } catch (err) {
+        console.warn("Falha ao salvar via API, salvando localmente:", err);
+    }
+
+    const products = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
     if (!product.id) {
         product.id = Date.now().toString();
     }
     products.push(product);
     localStorage.setItem(DB_KEY, JSON.stringify(products));
+    return product;
 }
 
-function deleteProduct(id) {
-    const products = getProducts();
-    const updated = products.filter(p => p.id !== id);
+async function deleteProduct(id) {
+    try {
+        const response = await fetch(`${API_URL}?id=${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+        });
+        if (response.ok) {
+            const products = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+            const updated = products.filter(p => String(p.id) !== String(id));
+            localStorage.setItem(DB_KEY, JSON.stringify(updated));
+            return true;
+        }
+    } catch (err) {
+        console.warn("Falha ao remover via API, removendo localmente:", err);
+    }
+
+    const products = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+    const updated = products.filter(p => String(p.id) !== String(id));
     localStorage.setItem(DB_KEY, JSON.stringify(updated));
+    return true;
 }
 
-function updateProduct(id, updatedData) {
-    const products = getProducts();
-    const index = products.findIndex(p => p.id === id);
+async function updateProduct(id, updatedData) {
+    try {
+        const response = await fetch(API_URL, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, ...updatedData })
+        });
+        if (response.ok) {
+            const updated = await response.json();
+            const products = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+            const index = products.findIndex(p => String(p.id) === String(id));
+            if (index !== -1) {
+                products[index] = { ...products[index], ...updatedData };
+                localStorage.setItem(DB_KEY, JSON.stringify(products));
+            }
+            return updated;
+        }
+    } catch (err) {
+        console.warn("Falha ao atualizar via API, atualizando localmente:", err);
+    }
+
+    const products = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+    const index = products.findIndex(p => String(p.id) === String(id));
     if (index !== -1) {
         products[index] = { ...products[index], ...updatedData };
         localStorage.setItem(DB_KEY, JSON.stringify(products));
     }
 }
+
 
 // Global Toast Notification
 function showToast(message, isError = false) {

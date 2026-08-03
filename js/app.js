@@ -117,11 +117,12 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
         `;
     }
 
-    function renderProducts(categoryFilter) {
+    async function renderProducts(categoryFilter) {
         if (!productsGrid) return;
 
-        const products = getProducts();
+        const products = await getProducts();
         productsGrid.innerHTML = '';
+
 
         let filteredProducts = products;
 
@@ -218,19 +219,20 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
     // Attach delete and edit events only if button exists
     if (!isCatalog) {
         document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
                 if (confirm('Tem certeza que deseja remover este produto?')) {
-                    deleteProduct(e.target.getAttribute('data-id'));
-                    renderProducts(getCurrentCategory());
+                    await deleteProduct(e.target.getAttribute('data-id'));
+                    await renderProducts(getCurrentCategory());
                     showToast("Produto removido.");
                 }
             });
         });
 
         document.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
                 const id = e.target.getAttribute('data-id');
-                const product = products.find(p => p.id === id);
+                const products = await getProducts();
+                const product = products.find(p => String(p.id) === String(id));
                 if (product) openEditModal(product);
             });
         });
@@ -294,7 +296,7 @@ function createModalHTML() {
         modal.classList.remove('active');
     });
 
-    document.getElementById('editForm').addEventListener('submit', (e) => {
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('editId').value;
         const updatedData = {
@@ -306,12 +308,13 @@ function createModalHTML() {
             image: document.getElementById('editImage').value
         };
 
-        updateProduct(id, updatedData);
+        await updateProduct(id, updatedData);
         modal.classList.remove('active');
         showToast("Produto atualizado com sucesso!");
-        renderProducts(getCurrentCategory());
+        await renderProducts(getCurrentCategory());
     });
 }
+
 
 function openEditModal(product) {
     createModalHTML();
