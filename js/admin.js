@@ -125,7 +125,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             showToast("Buscando dados em alta velocidade...");
-            let doc = await fetchHtmlFast(url);
+            try {
+                let doc = await fetchHtmlFast(url);
 
             if (doc) {
                 // Extração Genérica (Open Graph)
