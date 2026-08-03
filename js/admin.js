@@ -42,6 +42,57 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (urlInput) {
         urlInput.addEventListener('input', updatePricePreview);
         urlInput.addEventListener('change', updatePricePreview);
+    const sourceSelect = document.getElementById('productSource');
+    if (urlInput && sourceSelect) {
+        urlInput.addEventListener('input', () => {
+            const val = urlInput.value.toLowerCase();
+            if (val.includes('bhphotovideo.com')) sourceSelect.value = 'bh';
+            else if (val.includes('amazon.')) sourceSelect.value = 'amazon';
+            else if (val.includes('comprasparaguai.com.br')) sourceSelect.value = 'comprasparaguai';
+            else sourceSelect.value = 'auto';
+        });
+    }
+
+    // Função de busca paralela ultra-rápida (Promise.any)
+    async function fetchHtmlFast(targetUrl) {
+        const fetchWithTimeout = async (reqUrl, options = {}, timeoutMs = 3500) => {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const res = await fetch(reqUrl, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res;
+            } catch (e) {
+                clearTimeout(id);
+                throw e;
+            }
+        };
+
+        const fetchers = [
+            async () => {
+                const res = await fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
+                const html = await res.text();
+                return new DOMParser().parseFromString(html, 'text/html');
+            },
+            async () => {
+                const res = await fetchWithTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`);
+                const data = await res.json();
+                return new DOMParser().parseFromString(data.contents, 'text/html');
+            },
+            async () => {
+                const res = await fetchWithTimeout(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`);
+                const html = await res.text();
+                return new DOMParser().parseFromString(html, 'text/html');
+            }
+        ];
+
+        try {
+            return await Promise.any(fetchers.map(fn => fn()));
+        } catch (e) {
+            console.warn("Corrida de proxies estourou tempo limite:", e);
+            return null;
+        }
     }
 
     if (fetchBtn) {
@@ -59,7 +110,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             let title = '';
             let price = '';
             let image = '';
-            let doc = null;
 
             if (url.includes('nissei.com')) {
                 loader.style.display = 'none';
@@ -68,35 +118,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            try {
-                // Tentativa 1: corsproxy.io (Proxy mais robusto)
-                const corsUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-                const corsResponse = await fetch(corsUrl);
-                if (corsResponse.ok) {
-                    const html = await corsResponse.text();
-                    const parser = new DOMParser();
-                    doc = parser.parseFromString(html, 'text/html');
-                }
-            } catch (e) {
-                console.log("Corsproxy falhou", e);
-            }
-
-            if (!doc) {
-                try {
-                    // Tentativa 2: AllOrigins
-                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-                    const response = await fetch(proxyUrl);
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        const html = data.contents;
-                        const parser = new DOMParser();
-                        doc = parser.parseFromString(html, 'text/html');
-                    }
-                } catch (err) {
-                    console.log("AllOrigins falhou.", err);
-                }
-            }
+            showToast("Buscando dados em alta velocidade...");
+            let doc = await fetchHtmlFast(url);
 
             if (doc) {
                 // Extração Genérica (Open Graph)
@@ -135,7 +158,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (imgEl) image = imgEl.src;
                     }
                 } else if (url.includes('comprasparaguai.com.br')) {
-                    // Extração de preço específica para o Compras Paraguai (.header-product-info--price span)
                     let rawPriceText = '';
                     const priceSpan = doc.querySelector('.header-product-info--price span') ||
                                       doc.querySelector('.header-product-info--price') ||
@@ -161,6 +183,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 }
             }
+
 
             // Fallback (Método 2): Microlink API
             if (!title || !image || !price) {

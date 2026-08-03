@@ -26,13 +26,24 @@
             <h2 style="margin-bottom: 1.5rem; font-weight: 800;">Adicionar Novo Produto</h2>
             
             <div class="form-group">
-                <label for="productUrl">Link do Produto (B&H Photo ou Amazon)</label>
-                <input type="url" id="productUrl" placeholder="Cole o link aqui..." required>
+                <label for="productSource">Fonte / Loja do Produto</label>
+                <select id="productSource">
+                    <option value="auto">⚡ Auto-Detectar pelo Link (Mais Rápido)</option>
+                    <option value="bh">B&H Photo Video (US-BH)</option>
+                    <option value="amazon">Amazon (US-AM)</option>
+                    <option value="comprasparaguai">Compras Paraguai (MS)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="productUrl">Link do Produto</label>
+                <input type="url" id="productUrl" placeholder="Cole o link da B&H, Amazon ou Compras Paraguai..." required>
                 <div class="flex-btn-group">
-                    <button class="btn" id="fetchDataBtn">Buscar Dados Automaticamente</button>
+                    <button class="btn" id="fetchDataBtn">⚡ Buscar Dados Ultra-Rápido</button>
                 </div>
                 <div id="fetchLoader" class="loader" style="margin-top: 1rem;"></div>
             </div>
+
 
             <hr style="border-color: var(--card-border); margin: 2rem 0;">
 
