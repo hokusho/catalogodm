@@ -417,22 +417,15 @@ function openEditModal(product) {
 // Filter Logic
 filterBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
-        const isAlreadyActive = e.target.classList.contains('active');
         filterBtns.forEach(b => b.classList.remove('active'));
-
-        if (isAlreadyActive) {
-            currentBrand = null;
-            renderBrandFilters('all');
-            renderProducts('all');
-        } else {
-            e.target.classList.add('active');
-            currentBrand = null; // Reset brand when changing main category
-            const category = e.target.dataset.category;
-            renderBrandFilters(category);
-            renderProducts(category);
-        }
+        e.target.classList.add('active');
+        currentBrand = null; // Reset brand when changing main category
+        const category = e.target.dataset.category;
+        renderBrandFilters(category);
+        renderProducts(category);
     });
 });
+
 
 // Refresh Data Button Logic
 const refreshBtn = document.getElementById('refresh-data-btn');
