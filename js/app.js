@@ -77,42 +77,12 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
         }
     }
 
-    // Calculation logic based on user request:
-    // Helper to format currency
-    function calculatePrices(priceUSD, url) {
+    // Calculation logic uses calculatePrices from db.js with currentDollarAPI
+    function getAppPrices(priceUSD, url) {
         if (!currentDollarAPI) return { sn: 'Carregando...', nf: 'Carregando...' };
-
-        let snPrice, nfPrice;
-
-        if (url && url.includes('comprasparaguai.com.br')) {
-            // Regra Compras Paraguai: Dólar API + 0.20
-            const specialDollar = currentDollarAPI + 0.20;
-            const baseValueBRL = priceUSD * specialDollar;
-
-            // SN: Preço de Custo + 36%
-            snPrice = baseValueBRL * 1.36;
-
-            // NF: 13% sobre o SN (presumido) ou usando a fórmula normal
-            nfPrice = snPrice * 1.13;
-        } else {
-            // Regra Padrão (Amazon / B&H)
-            const safeDollar = currentDollarAPI + 0.10;
-            const baseValueBRL = priceUSD * safeDollar * 1.113;
-            snPrice = baseValueBRL * 1.30;
-            nfPrice = snPrice * 1.13;
-        }
-
-        const formatCurrency = (val) => {
-            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
-        };
-
-        return {
-            sn: formatCurrency(snPrice),
-            nf: formatCurrency(nfPrice),
-            snRaw: snPrice,
-            nfRaw: nfPrice
-        };
+        return calculatePrices(priceUSD, url, currentDollarAPI);
     }
+
 
     const installmentRates = [
         { label: '1x', rate: 1.0298 },
@@ -181,12 +151,15 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
         const isCatalog = document.body.dataset.page === 'catalog';
 
         filteredProducts.forEach(product => {
-            const prices = calculatePrices(product.priceUSD, product.url);
+            const prices = getAppPrices(product.priceUSD, product.url);
+
 
             let origin = 'Outros';
-            if (product.url.includes('amazon.')) origin = 'Amazon';
-            else if (product.url.includes('bhphotovideo.com')) origin = 'B&H Photo';
-            else if (product.url.includes('comprasparaguai.com.br')) origin = 'Paraguai';
+            if (product.url.includes('amazon.')) origin = 'US-AM';
+            else if (product.url.includes('bhphotovideo.com')) origin = 'US-BH';
+            else if (product.url.includes('comprasparaguai.com.br')) origin = 'MS';
+
+
 
             const adminInfoHTML = !isCatalog ? `
                 <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.8rem; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">
@@ -237,189 +210,221 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
             productsGrid.appendChild(card);
         });
 
-        // Attach delete and edit events only if button exists
-        if (!isCatalog) {
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    if (confirm('Tem certeza que deseja remover este produto?')) {
-                        deleteProduct(e.target.getAttribute('data-id'));
-                        renderProducts(document.querySelector('.filter-btn.active').dataset.category);
-                        showToast("Produto removido.");
-                    }
-                });
-            });
-
-            document.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const id = e.target.getAttribute('data-id');
-                    const product = products.find(p => p.id === id);
-                    if (product) openEditModal(product);
-                });
-            });
-        }
+    function getCurrentCategory() {
+        const activeBtn = document.querySelector('.filter-btn.active');
+        return activeBtn ? activeBtn.dataset.category : 'all';
     }
 
-    // Modal Edit Logic
-    function createModalHTML() {
-        if (document.getElementById('editModal')) return;
-
-        const modal = document.createElement('div');
-        modal.id = 'editModal';
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h3>Editar Produto</h3>
-                <form id="editForm">
-                    <input type="hidden" id="editId">
-                    <div class="form-group">
-                        <label>Link do Produto (URL)</label>
-                        <input type="url" id="editUrl" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Nome do Produto</label>
-                        <input type="text" id="editName" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Categoria</label>
-                        <select id="editCategory" required>
-                            <option value="camera">Câmera</option>
-                            <option value="lente">Lente</option>
-                            <option value="cartao">Cartão de Memória</option>
-                            <option value="flash">Flash</option>
-                            <option value="outro">Outro</option>
-                        </select>
-                    </div>
-                    <div class="form-group" id="editBrandGroup" style="display: none;">
-                        <label>Marca</label>
-                        <select id="editBrand">
-                            <option value="">(Nenhuma / Não se aplica)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Preço Base (USD)</label>
-                        <input type="number" step="0.01" id="editPrice" required>
-                    </div>
-                    <div class="form-group">
-                        <label>URL da Foto</label>
-                        <input type="url" id="editImage" required>
-                    </div>
-                    <div class="flex-btn-group">
-                        <button type="button" class="btn btn-secondary" id="closeModalBtn">Cancelar</button>
-                        <button type="submit" class="btn">Salvar</button>
-                    </div>
-                </form>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        document.getElementById('closeModalBtn').addEventListener('click', () => {
-            modal.classList.remove('active');
+    // Attach delete and edit events only if button exists
+    if (!isCatalog) {
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (confirm('Tem certeza que deseja remover este produto?')) {
+                    deleteProduct(e.target.getAttribute('data-id'));
+                    renderProducts(getCurrentCategory());
+                    showToast("Produto removido.");
+                }
+            });
         });
 
-        document.getElementById('editForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const id = document.getElementById('editId').value;
-            const updatedData = {
-                url: document.getElementById('editUrl').value,
-                name: document.getElementById('editName').value,
-                category: document.getElementById('editCategory').value,
-                brand: document.getElementById('editBrand').value,
-                priceUSD: parseFloat(document.getElementById('editPrice').value),
-                image: document.getElementById('editImage').value
-            };
-
-            updateProduct(id, updatedData);
-            modal.classList.remove('active');
-            showToast("Produto atualizado com sucesso!");
-            renderProducts(document.querySelector('.filter-btn.active').dataset.category);
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.getAttribute('data-id');
+                const product = products.find(p => p.id === id);
+                if (product) openEditModal(product);
+            });
         });
     }
+}
 
-    function openEditModal(product) {
-        createModalHTML();
+// Modal Edit Logic
+function createModalHTML() {
+    if (document.getElementById('editModal')) return;
 
-        const catSelect = document.getElementById('editCategory');
-        const brandSelect = document.getElementById('editBrand');
-        const brandGroup = document.getElementById('editBrandGroup');
+    const modal = document.createElement('div');
+    modal.id = 'editModal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Editar Produto</h3>
+            <form id="editForm">
+                <input type="hidden" id="editId">
+                <div class="form-group">
+                    <label>Link do Produto (URL)</label>
+                    <input type="url" id="editUrl" required>
+                </div>
+                <div class="form-group">
+                    <label>Nome do Produto</label>
+                    <input type="text" id="editName" required>
+                </div>
+                <div class="form-group">
+                    <label>Categoria</label>
+                    <select id="editCategory" required>
+                        <option value="camera">Câmera</option>
+                        <option value="lente">Lente</option>
+                        <option value="cartao">Cartão de Memória</option>
+                        <option value="flash">Flash</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
+                <div class="form-group" id="editBrandGroup" style="display: none;">
+                    <label>Marca</label>
+                    <select id="editBrand">
+                        <option value="">(Nenhuma / Não se aplica)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Preço Base (USD)</label>
+                    <input type="number" step="0.01" id="editPrice" required>
+                </div>
+                <div class="form-group">
+                    <label>URL da Foto</label>
+                    <input type="url" id="editImage" required>
+                </div>
+                <div class="flex-btn-group">
+                    <button type="button" class="btn btn-secondary" id="closeModalBtn">Cancelar</button>
+                    <button type="submit" class="btn">Salvar</button>
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(modal);
 
-        const updateEditBrands = () => {
-            const cat = catSelect.value;
-            const brands = subCategories[cat];
+    document.getElementById('closeModalBtn').addEventListener('click', () => {
+        modal.classList.remove('active');
+    });
 
-            brandSelect.innerHTML = '<option value="">(Nenhuma / Não se aplica)</option>';
-
-            if (brands && brands.length > 0) {
-                brands.forEach(b => {
-                    const opt = document.createElement('option');
-                    opt.value = b;
-                    opt.textContent = b;
-                    brandSelect.appendChild(opt);
-                });
-                brandGroup.style.display = 'block';
-            } else {
-                brandGroup.style.display = 'none';
-            }
+    document.getElementById('editForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('editId').value;
+        const updatedData = {
+            url: document.getElementById('editUrl').value,
+            name: document.getElementById('editName').value,
+            category: document.getElementById('editCategory').value,
+            brand: document.getElementById('editBrand').value,
+            priceUSD: parseFloat(document.getElementById('editPrice').value),
+            image: document.getElementById('editImage').value
         };
 
-        // Attach event listener only if not attached
-        if (!catSelect.dataset.listenerAttached) {
-            catSelect.addEventListener('change', updateEditBrands);
-            catSelect.dataset.listenerAttached = 'true';
+        updateProduct(id, updatedData);
+        modal.classList.remove('active');
+        showToast("Produto atualizado com sucesso!");
+        renderProducts(getCurrentCategory());
+    });
+}
+
+function openEditModal(product) {
+    createModalHTML();
+
+    const catSelect = document.getElementById('editCategory');
+    const brandSelect = document.getElementById('editBrand');
+    const brandGroup = document.getElementById('editBrandGroup');
+
+    const updateEditBrands = () => {
+        const cat = catSelect.value;
+        const brands = subCategories[cat];
+
+        brandSelect.innerHTML = '<option value="">(Nenhuma / Não se aplica)</option>';
+
+        if (brands && brands.length > 0) {
+            brands.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b;
+                opt.textContent = b;
+                brandSelect.appendChild(opt);
+            });
+            brandGroup.style.display = 'block';
+        } else {
+            brandGroup.style.display = 'none';
         }
+    };
 
-        document.getElementById('editId').value = product.id;
-        document.getElementById('editUrl').value = product.url;
-        document.getElementById('editName').value = product.name;
-        document.getElementById('editCategory').value = product.category;
-
-        updateEditBrands();
-        document.getElementById('editBrand').value = product.brand || '';
-
-        document.getElementById('editPrice').value = product.priceUSD;
-        document.getElementById('editImage').value = product.image;
-
-        document.getElementById('editModal').classList.add('active');
+    // Attach event listener only if not attached
+    if (!catSelect.dataset.listenerAttached) {
+        catSelect.addEventListener('change', updateEditBrands);
+        catSelect.dataset.listenerAttached = 'true';
     }
 
-    // Filter Logic
-    filterBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            filterBtns.forEach(b => b.classList.remove('active'));
+    document.getElementById('editId').value = product.id;
+    document.getElementById('editUrl').value = product.url;
+    document.getElementById('editName').value = product.name;
+    document.getElementById('editCategory').value = product.category;
+
+    updateEditBrands();
+    document.getElementById('editBrand').value = product.brand || '';
+
+    document.getElementById('editPrice').value = product.priceUSD;
+    document.getElementById('editImage').value = product.image;
+
+    document.getElementById('editModal').classList.add('active');
+}
+
+// Filter Logic
+filterBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const isAlreadyActive = e.target.classList.contains('active');
+        filterBtns.forEach(b => b.classList.remove('active'));
+
+        if (isAlreadyActive) {
+            currentBrand = null;
+            renderBrandFilters('all');
+            renderProducts('all');
+        } else {
             e.target.classList.add('active');
             currentBrand = null; // Reset brand when changing main category
             const category = e.target.dataset.category;
             renderBrandFilters(category);
             renderProducts(category);
-        });
+        }
+    });
+});
+
+// Refresh Data Button Logic
+const refreshBtn = document.getElementById('refresh-data-btn');
+if (refreshBtn) {
+    refreshBtn.addEventListener('click', async () => {
+        const originalHTML = refreshBtn.innerHTML;
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<i class="fa-solid fa-arrows-rotate fa-spin"></i> Atualizando...';
+        currentDollarAPI = await getDollarRate();
+        if (dollarDisplay) {
+            dollarDisplay.textContent = `Cotação Dólar (API): R$ ${currentDollarAPI.toFixed(2).replace('.', ',')}`;
+        }
+        renderProducts(getCurrentCategory());
+        showToast("Dados atualizados com sucesso!");
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = originalHTML;
+    });
+}
+
+// Terms Modal Logic
+const termsModal = document.getElementById('termsModal');
+const agreeTerms = document.getElementById('agreeTerms');
+const enterSiteBtn = document.getElementById('enterSiteBtn');
+const mainContent = document.getElementById('main-content');
+
+if (termsModal && agreeTerms && enterSiteBtn) {
+    // Always require terms acceptance on page load
+    // Checkbox logic
+    agreeTerms.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            enterSiteBtn.removeAttribute('disabled');
+        } else {
+            enterSiteBtn.setAttribute('disabled', 'true');
+        }
     });
 
-    // Terms Modal Logic
-    const termsModal = document.getElementById('termsModal');
-    const agreeTerms = document.getElementById('agreeTerms');
-    const enterSiteBtn = document.getElementById('enterSiteBtn');
-    const mainContent = document.getElementById('main-content');
+    // Enter button logic
+    enterSiteBtn.addEventListener('click', () => {
+        termsModal.classList.remove('active');
+        if (mainContent) mainContent.classList.remove('blurred');
+    });
 
-    if (termsModal && agreeTerms && enterSiteBtn) {
-        // Always require terms acceptance on page load
-        // Checkbox logic
-        agreeTerms.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                enterSiteBtn.removeAttribute('disabled');
-            } else {
-                enterSiteBtn.setAttribute('disabled', 'true');
-            }
-        });
+    // Reset checkbox on reload in some browsers
+    agreeTerms.checked = false;
+    enterSiteBtn.setAttribute('disabled', 'true');
+}
 
-        // Enter button logic
-        enterSiteBtn.addEventListener('click', () => {
-            termsModal.classList.remove('active');
-            if (mainContent) mainContent.classList.remove('blurred');
-        });
+init();
 
-        // Reset checkbox on reload in some browsers
-        agreeTerms.checked = false;
-        enterSiteBtn.setAttribute('disabled', 'true');
-    }
-
-    init();
 });

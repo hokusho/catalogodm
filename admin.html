@@ -62,13 +62,35 @@
 
                 <div class="form-group">
                     <label for="productPriceUSD">Preço Base (USD - B&H / Amazon)</label>
-                    <input type="number" id="productPriceUSD" step="0.01" required>
+                    <input type="number" id="productPriceUSD" step="0.01" placeholder="Ex: 1000.00" required>
+                </div>
+
+                <!-- Painel de Prévia do Preço Calculado -->
+                <div class="price-preview-container" id="pricePreviewContainer">
+                    <div class="price-preview-header">
+                        <span>Prévia de Preço Final</span>
+                        <span id="previewDollarRate" class="dollar-tag">Dólar API: R$ --</span>
+                    </div>
+                    <div class="price-preview-grid">
+                        <div class="preview-card highlight">
+                            <span class="preview-label">Preço Recibo (SN)</span>
+                            <span class="preview-value" id="previewPriceSN">R$ 0,00</span>
+                        </div>
+                        <div class="preview-card">
+                            <span class="preview-label">Preço Nota Fiscal (NF)</span>
+                            <span class="preview-value" id="previewPriceNF">R$ 0,00</span>
+                        </div>
+                    </div>
+                    <div class="preview-footer">
+                        <span>Regra Aplicada: <strong id="previewRule">Padrão</strong></span>
+                    </div>
                 </div>
 
                 <div class="form-group">
                     <label for="productImage">URL da Foto</label>
                     <input type="url" id="productImage" required>
                 </div>
+
 
                 <button type="submit" class="btn">Salvar Produto</button>
             </form>

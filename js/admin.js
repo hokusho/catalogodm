@@ -1,7 +1,48 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const fetchBtn = document.getElementById('fetchDataBtn');
     const productForm = document.getElementById('productForm');
     const loader = document.getElementById('fetchLoader');
+    const priceInput = document.getElementById('productPriceUSD');
+    const urlInput = document.getElementById('productUrl');
+
+    let currentDollarAPI = 5.00;
+
+    // Função para atualizar a prévia de preços na tela de admin
+    function updatePricePreview() {
+        const priceSNEl = document.getElementById('previewPriceSN');
+        const priceNFEl = document.getElementById('previewPriceNF');
+        const dollarRateEl = document.getElementById('previewDollarRate');
+        const ruleEl = document.getElementById('previewRule');
+
+        if (!priceInput || !priceSNEl || !priceNFEl) return;
+
+        if (dollarRateEl && currentDollarAPI) {
+            dollarRateEl.textContent = `Dólar API: R$ ${currentDollarAPI.toFixed(2).replace('.', ',')}`;
+        }
+
+        const priceUSD = parseFloat(priceInput.value);
+        const url = urlInput ? urlInput.value : '';
+
+        const prices = calculatePrices(priceUSD, url, currentDollarAPI);
+
+        priceSNEl.textContent = prices.sn;
+        priceNFEl.textContent = prices.nf;
+        if (ruleEl) ruleEl.textContent = prices.rule;
+    }
+
+    // Busca o dólar atual e atualiza a prévia inicial
+    currentDollarAPI = await getDollarRate();
+    updatePricePreview();
+
+    // Event listeners para atualização em tempo real no cadastro
+    if (priceInput) {
+        priceInput.addEventListener('input', updatePricePreview);
+        priceInput.addEventListener('change', updatePricePreview);
+    }
+    if (urlInput) {
+        urlInput.addEventListener('input', updatePricePreview);
+        urlInput.addEventListener('change', updatePricePreview);
+    }
 
     if (fetchBtn) {
         fetchBtn.addEventListener('click', async (e) => {
@@ -123,7 +164,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (!title && fallbackData.data.title) title = fallbackData.data.title;
                             if (!image && fallbackData.data.image && fallbackData.data.image.url) image = fallbackData.data.image.url;
                             if (!image && fallbackData.data.img) image = fallbackData.data.img;
-                            // Removido o fallback para a logo da empresa para não poluir o cadastro
                             
                             // Extrai o preço das regras customizadas
                             if (!price && fallbackData.data.price) {
@@ -155,6 +195,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 showToast("Erro ao processar dados da página. Preencha manualmente.", true);
             }
+
+            updatePricePreview();
 
             loader.style.display = 'none';
             fetchBtn.disabled = false;
@@ -225,6 +267,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("Produto cadastrado com sucesso!");
             productForm.reset();
             document.getElementById('productUrl').value = '';
+            updatePricePreview();
         });
     }
 });
+

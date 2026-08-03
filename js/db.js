@@ -60,3 +60,52 @@ async function getDollarRate() {
         return 5.50; // Fallback value if API fails
     }
 }
+
+// Global Price Calculation Helper
+function calculatePrices(priceUSD, url, dollarRate) {
+    if (!priceUSD || isNaN(priceUSD) || priceUSD <= 0) {
+        return {
+            sn: 'R$ 0,00',
+            nf: 'R$ 0,00',
+            snRaw: 0,
+            nfRaw: 0,
+            rule: 'Padrão'
+        };
+    }
+
+    const currentDollar = dollarRate || 5.00;
+    let snPrice, nfPrice, ruleName;
+
+    if (url && url.includes('comprasparaguai.com.br')) {
+        ruleName = 'Compras Paraguai';
+        // Regra Compras Paraguai: Dólar API + 0.20
+        const specialDollar = currentDollar + 0.20;
+        const baseValueBRL = priceUSD * specialDollar;
+
+        // SN: Preço de Custo + 36%
+        snPrice = baseValueBRL * 1.36;
+
+        // NF: 13% sobre o SN
+        nfPrice = snPrice * 1.13;
+    } else {
+        ruleName = 'Padrão (Amazon / B&H / Nissei)';
+        // Regra Padrão (Amazon / B&H / outros)
+        const safeDollar = currentDollar + 0.10;
+        const baseValueBRL = priceUSD * safeDollar * 1.113;
+        snPrice = baseValueBRL * 1.30;
+        nfPrice = snPrice * 1.13;
+    }
+
+    const formatCurrency = (val) => {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+    };
+
+    return {
+        sn: formatCurrency(snPrice),
+        nf: formatCurrency(nfPrice),
+        snRaw: snPrice,
+        nfRaw: nfPrice,
+        rule: ruleName
+    };
+}
+

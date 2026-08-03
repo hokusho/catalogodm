@@ -605,3 +605,83 @@ body[data-page="catalog"] main {
 #main-content.blurred {
     filter: blur(8px);
 }
+
+/* Price Preview Box in Admin */
+.price-preview-container {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-card);
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+.price-preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.dollar-tag {
+    background: rgba(255, 106, 0, 0.15);
+    color: var(--primary-color);
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    border: 1px solid rgba(255, 106, 0, 0.25);
+}
+
+.price-preview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+}
+
+.preview-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.preview-card.highlight {
+    background: rgba(255, 106, 0, 0.08);
+    border-color: rgba(255, 106, 0, 0.3);
+}
+
+.preview-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.preview-value {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.preview-card.highlight .preview-value {
+    color: var(--primary-color);
+}
+
+.preview-footer {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    padding-top: 0.5rem;
+}
+
+.preview-footer strong {
+    color: var(--text-main);
+}
+
