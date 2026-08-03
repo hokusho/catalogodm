@@ -5,12 +5,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerenciar Dados | DM-BH</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body data-page="dados">
     <header>
-        <h1>DM </h1>
+        <a href="index.html" class="nav-logo">
+            <img src="assets/logo.svg" alt="DM Photo" class="logo-img">
+        </a>
         <div class="nav-links">
             <a href="index.html" target="_blank">Ver Catálogo</a>
             <a href="admin.html">Cadastrar</a>
@@ -21,14 +26,18 @@
     <main>
         <div class="filters">
             <div class="filter-group" id="category-filters">
-                <button class="filter-btn active" data-category="all">Todos</button>
                 <button class="filter-btn" data-category="camera">Câmeras</button>
                 <button class="filter-btn" data-category="lente">Lentes</button>
                 <button class="filter-btn" data-category="cartao">Cartões</button>
                 <button class="filter-btn" data-category="flash">Flash</button>
                 <button class="filter-btn" data-category="outro">Outros</button>
             </div>
-            <div class="dollar-rate" id="dollar-display">
+            
+            <div class="filter-group" id="brand-filters" style="margin-top: 10px; display: none;">
+                <!-- Brand filters will be injected here -->
+            </div>
+            
+            <div class="dollar-rate" id="dollar-display" style="margin-top: 1rem;">
                 Cotação Dólar: Carregando...
             </div>
         </div>

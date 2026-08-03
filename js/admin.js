@@ -161,6 +161,41 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const subCategories = {
+        camera: ['CANON', 'SONY', 'NIKON'],
+        lente: ['CANON', 'SONY', 'NIKON', 'SIGMA', 'TAMROM', 'OUTRAS'],
+        cartao: ['SANDISK', 'LEXAR'],
+        flash: ['GODOX']
+    };
+
+    const categorySelect = document.getElementById('productCategory');
+    const brandGroup = document.getElementById('brandGroup');
+    const brandSelect = document.getElementById('productBrand');
+
+    if (categorySelect && brandSelect) {
+        const updateBrands = () => {
+            const cat = categorySelect.value;
+            const brands = subCategories[cat];
+            
+            brandSelect.innerHTML = '<option value="">(Nenhuma / Não se aplica)</option>';
+            
+            if (brands && brands.length > 0) {
+                brands.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b;
+                    opt.textContent = b;
+                    brandSelect.appendChild(opt);
+                });
+                brandGroup.style.display = 'block';
+            } else {
+                brandGroup.style.display = 'none';
+            }
+        };
+
+        categorySelect.addEventListener('change', updateBrands);
+        updateBrands(); // Run once on load
+    }
+
     if (productForm) {
         productForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -168,6 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const url = document.getElementById('productUrl').value;
             const name = document.getElementById('productName').value;
             const category = document.getElementById('productCategory').value;
+            const brand = document.getElementById('productBrand').value;
             const priceUSD = parseFloat(document.getElementById('productPriceUSD').value);
             const image = document.getElementById('productImage').value;
 
@@ -180,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 url,
                 name,
                 category,
+                brand,
                 priceUSD,
                 image
             };

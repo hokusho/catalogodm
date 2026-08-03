@@ -4,11 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Cadastrar Produto | DM-BH</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <header>
-        <h1>DM<span>BH</span> Admin</h1>
+        <a href="index.html" class="nav-logo">
+            <img src="assets/logo.svg" alt="DM Photo" class="logo-img">
+        </a>
         <div class="nav-links">
             <a href="index.html" target="_blank">Ver Catálogo</a>
             <a href="admin.html" class="active">Cadastrar</a>
@@ -45,6 +50,13 @@
                         <option value="cartao">Cartão de Memória</option>
                         <option value="flash">Flash</option>
                         <option value="outro">Outro</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="brandGroup" style="display: none;">
+                    <label for="productBrand">Marca</label>
+                    <select id="productBrand">
+                        <option value="">Selecione a marca...</option>
                     </select>
                 </div>
 
