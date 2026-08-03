@@ -136,7 +136,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (titleEl) title = titleEl.textContent.trim();
                     }
                     const priceEl = doc.querySelector('.a-price .a-offscreen') || doc.querySelector('#priceblock_ourprice');
-                    if (priceEl) price = priceEl.textContent.replace(/[^0-9.]/g, '');
+                    if (priceEl) {
+                        price = priceEl.textContent.replace(/[^0-9.]/g, '');
+                    } else {
+                        const whole = doc.querySelector('.a-price-whole');
+                        const fraction = doc.querySelector('.a-price-fraction');
+                        if (whole) {
+                            price = whole.textContent.replace(/[^0-9]/g, '') + '.' + (fraction ? fraction.textContent.replace(/[^0-9]/g, '') : '00');
+                        }
+                    }
                     
                     if (!image) {
                         const imgEl = doc.getElementById('landingImage');
@@ -189,7 +197,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Fallback (Método 2): Microlink API
             if (!title || !image || !price) {
                 try {
-                    let fallbackUrl = `https://api.microlink.io?url=${encodeURIComponent(url)}`;
+                    let fallbackUrl = `https://api.microlink.io?url=${encodeURIComponent(url)}&prerender=true`;
                     
                     if (url.includes('bhphotovideo.com')) {
                         fallbackUrl += `&data.price.selector=${encodeURIComponent('[data-selenium="pricingPrice"]')}&data.price.type=text`;
