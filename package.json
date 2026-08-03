@@ -1,15 +1,9 @@
 {
   "name": "catalogodm",
   "version": "1.0.0",
-  "description": "Catálogo DM Photo com Vercel e Prisma",
+  "description": "Catálogo DM Photo com Vercel e Neon Database",
   "main": "index.js",
-  "scripts": {
-    "postinstall": "prisma generate"
-  },
   "dependencies": {
-    "@prisma/client": "^5.22.0"
-  },
-  "devDependencies": {
-    "prisma": "^5.22.0"
+    "@neondatabase/serverless": "^0.10.4"
   }
 }

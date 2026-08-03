@@ -1,8 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-
-const globalForPrisma = globalThis;
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+const { neon } = require('@neondatabase/serverless');
 
 module.exports = async function handler(req, res) {
     // CORS headers
@@ -19,11 +15,35 @@ module.exports = async function handler(req, res) {
         return;
     }
 
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+        return res.status(500).json({ error: 'A variável DATABASE_URL não está configurada na Vercel.' });
+    }
+
+    const sql = neon(databaseUrl);
+
     try {
+        // Cria a tabela Product automaticamente no Neon se ela ainda não existir
+        await sql`
+            CREATE TABLE IF NOT EXISTS "Product" (
+                "id" TEXT PRIMARY KEY,
+                "url" TEXT NOT NULL,
+                "name" TEXT NOT NULL,
+                "category" TEXT NOT NULL,
+                "brand" TEXT DEFAULT '',
+                "priceUSD" DOUBLE PRECISION NOT NULL,
+                "image" TEXT NOT NULL,
+                "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+        `;
+
         if (req.method === 'GET') {
-            const products = await prisma.product.findMany({
-                orderBy: { createdAt: 'desc' }
-            });
+            const products = await sql`
+                SELECT id, url, name, category, brand, "priceUSD", image, "createdAt", "updatedAt"
+                FROM "Product"
+                ORDER BY "createdAt" DESC;
+            `;
             return res.status(200).json(products);
         }
 
@@ -32,20 +52,16 @@ module.exports = async function handler(req, res) {
             const { url, name, category, brand, priceUSD, image } = body;
             
             if (!name || priceUSD === undefined || !image) {
-                return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
+                return res.status(400).json({ error: 'Campos obrigatórios (nome, preco, imagem) ausentes.' });
             }
 
-            const newProduct = await prisma.product.create({
-                data: {
-                    url: url || '',
-                    name: String(name),
-                    category: String(category || 'outro'),
-                    brand: brand ? String(brand) : '',
-                    priceUSD: parseFloat(priceUSD),
-                    image: String(image)
-                }
-            });
-            return res.status(201).json(newProduct);
+            const id = require('crypto').randomUUID();
+            const result = await sql`
+                INSERT INTO "Product" (id, url, name, category, brand, "priceUSD", image, "createdAt", "updatedAt")
+                VALUES (${id}, ${url || ''}, ${String(name)}, ${String(category || 'outro')}, ${brand ? String(brand) : ''}, ${parseFloat(priceUSD)}, ${String(image)}, NOW(), NOW())
+                RETURNING id, url, name, category, brand, "priceUSD", image, "createdAt", "updatedAt";
+            `;
+            return res.status(201).json(result[0]);
         }
 
         if (req.method === 'PUT') {
@@ -56,18 +72,32 @@ module.exports = async function handler(req, res) {
                 return res.status(400).json({ error: 'ID do produto é obrigatório para atualização.' });
             }
 
-            const updatedProduct = await prisma.product.update({
-                where: { id: String(productId) },
-                data: {
-                    ...(body.url !== undefined && { url: String(body.url) }),
-                    ...(body.name !== undefined && { name: String(body.name) }),
-                    ...(body.category !== undefined && { category: String(body.category) }),
-                    ...(body.brand !== undefined && { brand: String(body.brand) }),
-                    ...(body.priceUSD !== undefined && { priceUSD: parseFloat(body.priceUSD) }),
-                    ...(body.image !== undefined && { image: String(body.image) })
-                }
-            });
-            return res.status(200).json(updatedProduct);
+            const name = body.name !== undefined ? String(body.name) : null;
+            const url = body.url !== undefined ? String(body.url) : null;
+            const category = body.category !== undefined ? String(body.category) : null;
+            const brand = body.brand !== undefined ? String(body.brand) : null;
+            const priceUSD = body.priceUSD !== undefined ? parseFloat(body.priceUSD) : null;
+            const image = body.image !== undefined ? String(body.image) : null;
+
+            const result = await sql`
+                UPDATE "Product"
+                SET 
+                    url = COALESCE(${url}, url),
+                    name = COALESCE(${name}, name),
+                    category = COALESCE(${category}, category),
+                    brand = COALESCE(${brand}, brand),
+                    "priceUSD" = COALESCE(${priceUSD}, "priceUSD"),
+                    image = COALESCE(${image}, image),
+                    "updatedAt" = NOW()
+                WHERE id = ${String(productId)}
+                RETURNING id, url, name, category, brand, "priceUSD", image, "createdAt", "updatedAt";
+            `;
+
+            if (result.length === 0) {
+                return res.status(404).json({ error: 'Produto não encontrado.' });
+            }
+
+            return res.status(200).json(result[0]);
         }
 
         if (req.method === 'DELETE') {
@@ -78,15 +108,17 @@ module.exports = async function handler(req, res) {
                 return res.status(400).json({ error: 'ID do produto é obrigatório para remoção.' });
             }
 
-            await prisma.product.delete({
-                where: { id: String(productId) }
-            });
+            await sql`
+                DELETE FROM "Product"
+                WHERE id = ${String(productId)};
+            `;
+
             return res.status(200).json({ success: true, message: 'Produto removido com sucesso.' });
         }
 
         return res.status(405).json({ error: 'Método não permitido' });
     } catch (error) {
-        console.error('API Error:', error);
-        return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
+        console.error('Neon API Error:', error);
+        return res.status(500).json({ error: error.message || 'Erro no banco de dados Neon' });
     }
 };
