@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (urlInput) {
         urlInput.addEventListener('input', updatePricePreview);
         urlInput.addEventListener('change', updatePricePreview);
+    }
     const sourceSelect = document.getElementById('productSource');
     if (urlInput && sourceSelect) {
         urlInput.addEventListener('input', () => {

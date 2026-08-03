@@ -415,11 +415,15 @@ function createModalHTML() {
         let url = document.getElementById('editUrl').value;
         const selectedRule = document.getElementById('editRule').value;
 
-        // Garante que o cálculo permaneça persistente de acordo com a regra escolhida
-        if (selectedRule === 'paraguai' && (!url || !url.includes('comprasparaguai'))) {
-            url = 'https://comprasparaguai.com.br/' + (url ? url.replace(/^https?:\/\//, '') : '');
-        } else if (selectedRule === 'standard' && url && url.includes('comprasparaguai')) {
-            url = 'https://bhphotovideo.com/c/product/' + url.replace(/[^a-zA-Z0-9]/g, '');
+        // Garante que a regra escolhida fique marcada e persistida no banco Neon
+        if (selectedRule === 'paraguai') {
+            if (!url || !url.toLowerCase().includes('comprasparaguai')) {
+                url = 'https://comprasparaguai.com.br/' + (url ? url.replace(/^https?:\/\//i, '') : '');
+            }
+        } else if (selectedRule === 'standard') {
+            if (url && url.toLowerCase().includes('comprasparaguai')) {
+                url = 'https://bhphotovideo.com/' + url.replace(/^https?:\/\/(www\.)?comprasparaguai\.com\.br\/?/i, '');
+            }
         }
 
         const updatedData = {
@@ -430,6 +434,7 @@ function createModalHTML() {
             priceUSD: parseFloat(document.getElementById('editPrice').value),
             image: rawImage
         };
+
 
         await updateProduct(id, updatedData);
         modal.classList.remove('active');
