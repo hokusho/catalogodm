@@ -1,4 +1,18 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    // Auth check for protected pages (dados.html)
+    const isProtectedPage = document.body.dataset.page !== 'catalog';
+    if (isProtectedPage) {
+        const isValid = await validateToken();
+        if (!isValid) {
+            setupLoginModal();
+            return;
+        }
+        const loginModal = document.getElementById('loginModal');
+        const protectedContent = document.getElementById('protectedContent');
+        if (loginModal) loginModal.classList.remove('active');
+        if (protectedContent) protectedContent.style.display = '';
+    }
+
     const productsGrid = document.getElementById('products-grid');
     const dollarDisplay = document.getElementById('dollar-display');
     const filterBtns = document.querySelectorAll('.filter-btn');
@@ -176,10 +190,10 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
             card.className = 'product-card';
             card.innerHTML = `
                 <div class="product-img-container">
-                    <img src="${product.image}" alt="${product.name}" class="product-img" onerror="this.src='https://via.placeholder.com/250?text=Sem+Foto'">
+                    <img src="${sanitizeImageUrl(product.image)}" alt="${escapeHTML(product.name)}" class="product-img" onerror="this.src='https://via.placeholder.com/250?text=Sem+Foto'">
                 </div>
                 <div class="product-info">
-                    <h3 class="product-name" title="${product.name}">${product.name}</h3>
+                    <h3 class="product-name" title="${escapeHTML(product.name)}">${escapeHTML(product.name)}</h3>
                     
                     ${adminInfoHTML}
                     

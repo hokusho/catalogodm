@@ -14,6 +14,25 @@
 </head>
 
 <body>
+    <div id="loginModal" class="modal-overlay active">
+        <div class="modal-content" style="max-width: 400px;">
+            <h3 style="text-align: center;">&#128274; Acesso Restrito</h3>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginUser">Usuário</label>
+                    <input type="text" id="loginUser" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Senha</label>
+                    <input type="password" id="loginPassword" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn">Entrar</button>
+            </form>
+            <p id="loginError" style="color: #ff3333; margin-top: 1rem; display: none; text-align: center; font-size: 0.9rem;"></p>
+        </div>
+    </div>
+
+    <div id="protectedContent" style="display: none;">
     <header>
         <a href="index.html" class="nav-logo">
             <img src="assets/logo.svg" alt="DM Photo" class="logo-img">
@@ -182,6 +201,7 @@
     </main>
 
     <div id="toast"></div>
+    </div>
 
     <script src="js/db.js"></script>
     <script src="js/admin.js"></script>

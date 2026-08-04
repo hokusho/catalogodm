@@ -1,4 +1,15 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    // Auth check
+    const isValid = await validateToken();
+    if (!isValid) {
+        setupLoginModal();
+        return;
+    }
+    const loginModal = document.getElementById('loginModal');
+    const protectedContent = document.getElementById('protectedContent');
+    if (loginModal) loginModal.classList.remove('active');
+    if (protectedContent) protectedContent.style.display = '';
+
     const fetchBtn = document.getElementById('fetchDataBtn');
     const productForm = document.getElementById('productForm');
     const loader = document.getElementById('fetchLoader');
@@ -114,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             return await Promise.any(fetchers.map(fn => fn()));
         } catch (e) {
-            console.warn("Corrida de proxies estourou tempo limite:", e);
+            // All proxy attempts failed
             return null;
         }
     }
@@ -188,7 +199,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     urlInput.dispatchEvent(new Event('input'));
                 }
             } catch (err) {
-                console.error("Erro ao colar:", err);
+                // Clipboard permission denied
                 showToast("Erro ao colar: Permissão negada. Cole manualmente (Ctrl+V).", true);
             }
         });
@@ -334,7 +345,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     }
                 } catch (fallbackErr) {
-                    console.log("Fallback API falhou.", fallbackErr);
+                    // Fallback API failed
                 }
             }
 
@@ -349,7 +360,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (!image && jlData.image) image = jlData.image;
                         }
                     } catch (jlErr) {
-                        console.log("JSONLink API falhou.", jlErr);
+                        // JSONLink API failed
                     }
                 }
 
@@ -555,7 +566,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showToast("Produto cadastrado com sucesso no Banco Neon!");
                 resetAdminForm();
             } catch (saveError) {
-                console.error("Erro ao salvar produto no Neon:", saveError);
+                // Save error handled by showToast in saveProduct
             }
 
         });

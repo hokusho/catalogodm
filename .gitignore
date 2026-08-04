@@ -12,3 +12,8 @@ node_modules/
 # OS metadata
 .DS_Store
 Thumbs.db
+
+# Test & temporary files
+dub_test.txt
+*.bak
+*.tmp

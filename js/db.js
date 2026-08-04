@@ -1,87 +1,209 @@
 // Strict API Database Utility - Direct connection to Vercel/Prisma/Neon API
-const API_URL = '/api/products';
+var API_URL = '/api/products';
+var AUTH_API_URL = '/api/auth';
+var AUTH_TOKEN_KEY = 'catalogodm_auth_token';
+
+// ========== Auth Helpers ==========
+
+function getAuthToken() {
+    return sessionStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+function setAuthToken(token) {
+    sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+}
+
+function clearAuthToken() {
+    sessionStorage.removeItem(AUTH_TOKEN_KEY);
+}
+
+function getAuthHeaders() {
+    var token = getAuthToken();
+    if (token) {
+        return { 'Authorization': 'Bearer ' + token };
+    }
+    return {};
+}
+
+async function loginAdmin(user, password) {
+    var response = await fetch(AUTH_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: user, password: password })
+    });
+    if (!response.ok) {
+        var data = await response.json().catch(function() { return {}; });
+        throw new Error(data.error || 'Credenciais inválidas');
+    }
+    var data = await response.json();
+    setAuthToken(data.token);
+    return true;
+}
+
+async function validateToken() {
+    var token = getAuthToken();
+    if (!token) return false;
+    try {
+        var response = await fetch(AUTH_API_URL, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (response.ok) return true;
+        clearAuthToken();
+        return false;
+    } catch (e) {
+        return false;
+    }
+}
+
+function setupLoginModal() {
+    var loginModal = document.getElementById('loginModal');
+    var protectedContent = document.getElementById('protectedContent');
+    var loginForm = document.getElementById('loginForm');
+    var loginError = document.getElementById('loginError');
+
+    if (loginModal) loginModal.classList.add('active');
+    if (protectedContent) protectedContent.style.display = 'none';
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var user = document.getElementById('loginUser').value;
+            var password = document.getElementById('loginPassword').value;
+            var submitBtn = loginForm.querySelector('button[type="submit"]');
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Entrando...';
+            }
+
+            try {
+                await loginAdmin(user, password);
+                window.location.reload();
+            } catch (err) {
+                if (loginError) {
+                    loginError.textContent = 'Usuário ou senha incorretos';
+                    loginError.style.display = 'block';
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Entrar';
+                }
+            }
+        });
+    }
+}
+
+// ========== HTML Sanitization ==========
+
+function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    var div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
+}
+
+function sanitizeImageUrl(url) {
+    if (!url) return '';
+    var s = String(url).trim();
+    if (s.startsWith('data:image/')) return s;
+    if (s.startsWith('https://') || s.startsWith('http://')) return s;
+    return '';
+}
+
+// ========== API Functions ==========
 
 async function getProducts() {
     try {
-        const response = await fetch(API_URL);
+        var response = await fetch(API_URL);
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const msg = errorData.error || `HTTP ${response.status} ${response.statusText}`;
-            showToast(`Erro Banco Neon (GET): ${msg}`, true);
-            console.error("Erro ao buscar produtos do Neon:", msg);
+            var errorData = await response.json().catch(function() { return {}; });
+            var msg = errorData.error || 'Erro ao buscar produtos';
+            showToast('Erro Banco Neon (GET): ' + msg, true);
             return [];
         }
-        const data = await response.json();
+        var data = await response.json();
         return Array.isArray(data) ? data : [];
     } catch (err) {
-        showToast(`Erro Conexão API: ${err.message}`, true);
-        console.error("Erro na conexão com API:", err);
+        showToast('Erro Conexão API: ' + err.message, true);
         return [];
     }
 }
 
 async function saveProduct(product) {
     try {
-        const response = await fetch(API_URL, {
+        var headers = { 'Content-Type': 'application/json' };
+        var authHeaders = getAuthHeaders();
+        for (var key in authHeaders) {
+            headers[key] = authHeaders[key];
+        }
+
+        var response = await fetch(API_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify(product)
         });
         
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const msg = errorData.error || `HTTP ${response.status} ${response.statusText}`;
-            showToast(`ERRO BANCO NEON: ${msg}`, true);
-            throw new Error(`Falha ao salvar no Neon: ${msg}`);
+            var errorData = await response.json().catch(function() { return {}; });
+            var msg = errorData.error || 'Erro ao salvar';
+            showToast('ERRO BANCO NEON: ' + msg, true);
+            throw new Error('Falha ao salvar no Neon: ' + msg);
         }
         
-        const saved = await response.json();
+        var saved = await response.json();
         return saved;
     } catch (err) {
-        showToast(`ERRO CONEXÃO API: ${err.message}`, true);
+        showToast('ERRO CONEXÃO API: ' + err.message, true);
         throw err;
     }
 }
 
 async function deleteProduct(id) {
     try {
-        const response = await fetch(`${API_URL}?id=${encodeURIComponent(id)}`, {
-            method: 'DELETE'
+        var response = await fetch(API_URL + '?id=' + encodeURIComponent(id), {
+            method: 'DELETE',
+            headers: getAuthHeaders()
         });
         
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const msg = errorData.error || `HTTP ${response.status} ${response.statusText}`;
-            showToast(`ERRO BANCO NEON: ${msg}`, true);
-            throw new Error(`Falha ao remover no Neon: ${msg}`);
+            var errorData = await response.json().catch(function() { return {}; });
+            var msg = errorData.error || 'Erro ao remover';
+            showToast('ERRO BANCO NEON: ' + msg, true);
+            throw new Error('Falha ao remover no Neon: ' + msg);
         }
         
         return true;
     } catch (err) {
-        showToast(`ERRO CONEXÃO API: ${err.message}`, true);
+        showToast('ERRO CONEXÃO API: ' + err.message, true);
         throw err;
     }
 }
 
 async function updateProduct(id, updatedData) {
     try {
-        const response = await fetch(API_URL, {
+        var headers = { 'Content-Type': 'application/json' };
+        var authHeaders = getAuthHeaders();
+        for (var key in authHeaders) {
+            headers[key] = authHeaders[key];
+        }
+
+        var response = await fetch(API_URL, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, ...updatedData })
+            headers: headers,
+            body: JSON.stringify({ id: id, ...updatedData })
         });
         
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const msg = errorData.error || `HTTP ${response.status} ${response.statusText}`;
-            showToast(`ERRO BANCO NEON: ${msg}`, true);
-            throw new Error(`Falha ao atualizar no Neon: ${msg}`);
+            var errorData = await response.json().catch(function() { return {}; });
+            var msg = errorData.error || 'Erro ao atualizar';
+            showToast('ERRO BANCO NEON: ' + msg, true);
+            throw new Error('Falha ao atualizar no Neon: ' + msg);
         }
         
-        const updated = await response.json();
+        var updated = await response.json();
         return updated;
     } catch (err) {
-        showToast(`ERRO CONEXÃO API: ${err.message}`, true);
+        showToast('ERRO CONEXÃO API: ' + err.message, true);
         throw err;
     }
 }
@@ -89,8 +211,9 @@ async function updateProduct(id, updatedData) {
 
 
 // Global Toast Notification
-function showToast(message, isError = false) {
-    const toast = document.getElementById('toast');
+function showToast(message, isError) {
+    if (isError === undefined) isError = false;
+    var toast = document.getElementById('toast');
     if (!toast) return;
     
     toast.textContent = message;
@@ -102,7 +225,7 @@ function showToast(message, isError = false) {
     
     toast.classList.add('show');
     
-    setTimeout(() => {
+    setTimeout(function() {
         toast.classList.remove('show');
     }, 3000);
 }
@@ -110,11 +233,10 @@ function showToast(message, isError = false) {
 // Fetch Dollar Rate
 async function getDollarRate() {
     try {
-        const response = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
-        const data = await response.json();
+        var response = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
+        var data = await response.json();
         return parseFloat(data.USDBRL.ask);
     } catch (error) {
-        console.error("Error fetching dollar rate:", error);
         return 5.50; // Fallback value if API fails
     }
 }
@@ -131,14 +253,14 @@ function calculatePrices(priceUSD, url, dollarRate) {
         };
     }
 
-    const currentDollar = dollarRate || 5.00;
-    let snPrice, nfPrice, ruleName;
+    var currentDollar = dollarRate || 5.00;
+    var snPrice, nfPrice, ruleName;
 
     if (url && url.includes('comprasparaguai.com.br')) {
         ruleName = 'Compras Paraguai';
         // Regra Compras Paraguai: Dólar API + 0.20
-        const specialDollar = currentDollar + 0.20;
-        const baseValueBRL = priceUSD * specialDollar;
+        var specialDollar = currentDollar + 0.20;
+        var baseValueBRL = priceUSD * specialDollar;
 
         // SN: Preço de Custo + 36%
         snPrice = baseValueBRL * 1.36;
@@ -148,13 +270,13 @@ function calculatePrices(priceUSD, url, dollarRate) {
     } else {
         ruleName = 'Padrão (Amazon / B&H / Nissei)';
         // Regra Padrão (Amazon / B&H / outros)
-        const safeDollar = currentDollar + 0.10;
-        const baseValueBRL = priceUSD * safeDollar * 1.113;
+        var safeDollar = currentDollar + 0.10;
+        var baseValueBRL = priceUSD * safeDollar * 1.113;
         snPrice = baseValueBRL * 1.30;
         nfPrice = snPrice * 1.13;
     }
 
-    const formatCurrency = (val) => {
+    var formatCurrency = function(val) {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
     };
 
@@ -171,84 +293,81 @@ function calculatePrices(priceUSD, url, dollarRate) {
 async function downloadAndOptimizeImage(imageUrl) {
     if (!imageUrl) return '';
 
-    let blob = null;
+    var blob = null;
 
     if (imageUrl.startsWith('data:')) {
         try {
-            const res = await fetch(imageUrl);
+            var res = await fetch(imageUrl);
             blob = await res.blob();
         } catch (e) {
-            console.log("Erro ao converter data URL para blob:", e);
+            // Data URL conversion failed
         }
     } else {
         // Tenta baixar via CORS proxy
         try {
-            const corsUrl = `https://corsproxy.io/?${encodeURIComponent(imageUrl)}`;
-            const res = await fetch(corsUrl);
+            var corsUrl = 'https://corsproxy.io/?' + encodeURIComponent(imageUrl);
+            var res = await fetch(corsUrl);
             if (res.ok) {
                 blob = await res.blob();
             }
         } catch (e) {
-            console.log("Corsproxy falhou para imagem, tentando fetch direto...", e);
+            // CORS proxy failed, trying direct fetch
         }
 
         if (!blob) {
             try {
-                const res = await fetch(imageUrl);
+                var res = await fetch(imageUrl);
                 if (res.ok) blob = await res.blob();
             } catch (e) {
-                console.log("Fetch direto da imagem falhou:", e);
+                // Direct fetch failed
             }
         }
     }
 
-    return new Promise((resolve) => {
-        const img = new Image();
+    return new Promise(function(resolve) {
+        var img = new Image();
         img.crossOrigin = 'anonymous';
 
-        const processCanvas = () => {
+        var processCanvas = function() {
             try {
-                const targetHeight = 300;
-                const aspect = (img.width && img.height) ? (img.width / img.height) : 1;
-                const targetWidth = Math.round(targetHeight * aspect);
+                var targetHeight = 300;
+                var aspect = (img.width && img.height) ? (img.width / img.height) : 1;
+                var targetWidth = Math.round(targetHeight * aspect);
 
-                const canvas = document.createElement('canvas');
+                var canvas = document.createElement('canvas');
                 canvas.width = targetWidth;
                 canvas.height = targetHeight;
 
-                const ctx = canvas.getContext('2d');
+                var ctx = canvas.getContext('2d');
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-                let webpUrl = canvas.toDataURL('image/webp', 0.82);
+                var webpUrl = canvas.toDataURL('image/webp', 0.82);
                 if (!webpUrl.startsWith('data:image/webp')) {
                     webpUrl = canvas.toDataURL('image/jpeg', 0.82);
                 }
                 resolve(webpUrl);
             } catch (err) {
-                console.warn("Erro ao processar canvas da imagem, usando URL original:", err);
                 resolve(imageUrl);
             }
         };
 
         if (blob) {
-            const objectUrl = URL.createObjectURL(blob);
-            img.onload = () => {
+            var objectUrl = URL.createObjectURL(blob);
+            img.onload = function() {
                 URL.revokeObjectURL(objectUrl);
                 processCanvas();
             };
-            img.onerror = () => {
+            img.onerror = function() {
                 URL.revokeObjectURL(objectUrl);
                 resolve(imageUrl);
             };
             img.src = objectUrl;
         } else {
             img.onload = processCanvas;
-            img.onerror = () => resolve(imageUrl);
+            img.onerror = function() { resolve(imageUrl); };
             img.src = imageUrl;
         }
     });
 }
-
-
