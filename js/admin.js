@@ -536,7 +536,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const priceUSD = parseFloat(document.getElementById('productPriceUSD').value);
             const image = document.getElementById('productImage').value;
 
-            if (!name || !priceUSD || !image) {
+            if (!name || !category || !priceUSD || !image) {
                 showToast("Preencha todos os campos obrigatórios.", true);
                 return;
             }
