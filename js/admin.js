@@ -118,15 +118,98 @@ document.addEventListener('DOMContentLoaded', async () => {
             return null;
         }
     }
+    async function processJsonInput(text) {
+        if (!text || !text.trim().startsWith('{') || !text.trim().endsWith('}')) {
+            return false;
+        }
+        try {
+            const jsonData = JSON.parse(text);
+            if (jsonData && (jsonData.nome || jsonData.preco || jsonData.imagem || jsonData.regra)) {
+                if (jsonData.nome) document.getElementById('productName').value = jsonData.nome;
+                if (jsonData.preco) {
+                    let cleanPrice = String(jsonData.preco).replace(/US\$/i, '').trim();
+                    if (cleanPrice.includes(',')) {
+                        cleanPrice = cleanPrice.replace(/\./g, '').replace(',', '.');
+                    }
+                    const parsedPrice = parseFloat(cleanPrice.replace(/[^0-9.]/g, ''));
+                    if (!isNaN(parsedPrice)) {
+                        document.getElementById('productPriceUSD').value = parsedPrice.toFixed(2);
+                        document.getElementById('productPriceUSD').dispatchEvent(new Event('input'));
+                    }
+                }
+                if (jsonData.regra) {
+                    const ruleRadios = document.getElementsByName('calcRule');
+                    if (ruleRadios && ruleRadios.length > 0) {
+                        const ruleValue = jsonData.regra.toUpperCase() === 'MS' ? 'paraguai' : 'standard';
+                        const radio = Array.from(ruleRadios).find(r => r.value === ruleValue);
+                        if (radio) {
+                            radio.checked = true;
+                        }
+                    }
+                }
+                if (jsonData.imagem) {
+                    showToast("Processando imagem do JSON...");
+                    const optimizedImage = await downloadAndOptimizeImage(jsonData.imagem);
+                    document.getElementById('productImage').value = optimizedImage;
+                    const previewImg = document.getElementById('imagePreview');
+                    const previewContainer = document.getElementById('imagePreviewContainer');
+                    if (previewImg) previewImg.src = optimizedImage;
+                    if (previewContainer) previewContainer.style.display = 'block';
+                }
+                showToast("JSON processado com sucesso!", false);
+                return true;
+            }
+        } catch (jsonErr) {
+            return false;
+        }
+        return false;
+    }
+
+    if (urlInput) {
+        urlInput.addEventListener('input', async (e) => {
+            const val = e.target.value.trim();
+            if (val.startsWith('{')) {
+                const success = await processJsonInput(val);
+                if (success) {
+                    e.target.value = ''; // Limpa o input após processar
+                    updatePricePreview();
+                }
+            }
+        });
+    }
+
+    const pasteJsonBtn = document.getElementById('pasteJsonBtn');
+    if (pasteJsonBtn) {
+        pasteJsonBtn.addEventListener('click', async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (urlInput && text) {
+                    urlInput.value = text;
+                    urlInput.dispatchEvent(new Event('input'));
+                }
+            } catch (err) {
+                console.error("Erro ao colar:", err);
+                showToast("Erro ao colar: Permissão negada. Cole manualmente (Ctrl+V).", true);
+            }
+        });
+    }
 
     if (fetchBtn) {
         fetchBtn.addEventListener('click', async (e) => {
             e.preventDefault();
-            const url = document.getElementById('productUrl').value;
-            if (!url) {
-                showToast("Por favor, insira o link do produto.", true);
+            const urlOrJson = document.getElementById('productUrl').value.trim();
+            if (!urlOrJson) {
+                showToast("Por favor, insira o link do produto ou JSON.", true);
                 return;
             }
+
+            // Tenta processar como JSON primeiro
+            if (await processJsonInput(urlOrJson)) {
+                document.getElementById('productUrl').value = '';
+                return;
+            }
+
+            const url = urlOrJson;
 
             loader.style.display = 'block';
             fetchBtn.disabled = true;
