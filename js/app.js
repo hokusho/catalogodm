@@ -256,7 +256,7 @@ function createModalHTML() {
                 <input type="hidden" id="editId">
                 <div class="form-group">
                     <label>Link do Produto (URL)</label>
-                    <input type="url" id="editUrl" required>
+                    <input type="text" id="editUrl">
                 </div>
                 <div class="form-group">
                     <label>Nome do Produto</label>
@@ -269,6 +269,7 @@ function createModalHTML() {
                         <option value="lente">Lente</option>
                         <option value="cartao">Cartão de Memória</option>
                         <option value="flash">Flash</option>
+                        <option value="microfone">Microfone</option>
                         <option value="outro">Outro</option>
                     </select>
                 </div>
