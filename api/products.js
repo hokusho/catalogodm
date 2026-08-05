@@ -4,6 +4,58 @@ const crypto = require('crypto');
 // Lazy table initialization (once per cold start, not every request)
 let tableInitialized = false;
 
+// ===== Server-side price calculation for public catalog =====
+let cachedDollarRate = null;
+let dollarRateFetchedAt = 0;
+const DOLLAR_CACHE_MS = 5 * 60 * 1000; // Cache for 5 minutes
+
+async function getServerDollarRate() {
+    const now = Date.now();
+    if (cachedDollarRate && (now - dollarRateFetchedAt) < DOLLAR_CACHE_MS) {
+        return cachedDollarRate;
+    }
+    try {
+        const res = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
+        const data = await res.json();
+        cachedDollarRate = parseFloat(data.USDBRL.ask);
+        dollarRateFetchedAt = now;
+        return cachedDollarRate;
+    } catch (error) {
+        return cachedDollarRate || 5.50;
+    }
+}
+
+function serverCalculatePrices(priceUSD, url, dollarRate) {
+    if (!priceUSD || isNaN(priceUSD) || priceUSD <= 0) {
+        return { sn: 'R$ 0,00', nf: 'R$ 0,00', snRaw: 0, nfRaw: 0 };
+    }
+    var currentDollar = dollarRate || 5.00;
+    var snPrice, nfPrice;
+
+    if (url && url.includes('comprasparaguai.com.br')) {
+        var specialDollar = currentDollar + 0.20;
+        var baseValueBRL = priceUSD * specialDollar;
+        snPrice = baseValueBRL * 1.36;
+        nfPrice = snPrice * 1.13;
+    } else {
+        var safeDollar = currentDollar + 0.10;
+        var baseValueBRL = priceUSD * safeDollar * 1.113;
+        snPrice = baseValueBRL * 1.30;
+        nfPrice = snPrice * 1.13;
+    }
+
+    var formatCurrency = function(val) {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+    };
+
+    return {
+        sn: formatCurrency(snPrice),
+        nf: formatCurrency(nfPrice),
+        snRaw: Math.round(snPrice * 100) / 100,
+        nfRaw: Math.round(nfPrice * 100) / 100
+    };
+}
+
 // Verify HMAC-SHA256 token
 function verifyToken(token, secret) {
     if (!token || typeof token !== 'string') return false;
@@ -114,6 +166,47 @@ module.exports = async function handler(req, res) {
         }
 
         if (req.method === 'GET') {
+            // Public catalog endpoint - returns only safe data with pre-calculated prices
+            if (req.query && req.query.catalog === 'true') {
+                var dollarRate = await getServerDollarRate();
+                var products = await sql`
+                    SELECT id, url, name, category, brand, "priceUSD", image
+                    FROM "Product"
+                    ORDER BY "createdAt" DESC;
+                `;
+                
+                var safeProducts = products.map(function(p) {
+                    var prices = serverCalculatePrices(p.priceUSD, p.url, dollarRate);
+                    return {
+                        id: p.id,
+                        name: p.name,
+                        category: p.category,
+                        brand: p.brand || '',
+                        image: p.image,
+                        priceSN: prices.sn,
+                        priceNF: prices.nf,
+                        priceSNRaw: prices.snRaw,
+                        priceNFRaw: prices.nfRaw
+                    };
+                });
+                
+                return res.status(200).json(safeProducts);
+            }
+            
+            // Full data endpoint - requires authentication
+            var secret = getSecret();
+            if (!secret) {
+                return res.status(500).json({ error: 'Erro interno de configuração' });
+            }
+            var authHeader = req.headers.authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return res.status(401).json({ error: 'Autenticação necessária' });
+            }
+            var token = authHeader.substring(7);
+            if (!verifyToken(token, secret)) {
+                return res.status(401).json({ error: 'Token inválido ou expirado' });
+            }
+            
             var products = await sql`
                 SELECT id, url, name, category, brand, "priceUSD", image, "createdAt", "updatedAt"
                 FROM "Product"

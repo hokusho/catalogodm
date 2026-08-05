@@ -1,0 +1,10 @@
+# Robots.txt - Catalogo DM
+# Block admin and management pages from search engines and crawlers
+
+User-agent: *
+Allow: /
+Allow: /index.html
+Disallow: /admin.html
+Disallow: /dados.html
+Disallow: /js/calc.js
+Disallow: /js/admin.js

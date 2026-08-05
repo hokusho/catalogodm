@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // Auth check for protected pages (dados.html)
-    const isProtectedPage = document.body.dataset.page !== 'catalog';
+    // Detect page type
+    const isCatalog = document.body.dataset.page === 'catalog';
+    const isProtectedPage = !isCatalog;
     if (isProtectedPage) {
         const isValid = await validateToken();
         if (!isValid) {
@@ -43,10 +44,11 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
 
     // Initialize
     async function init() {
-        currentDollarAPI = await getDollarRate();
-
-        if (dollarDisplay) {
-            dollarDisplay.textContent = `Cotação Dólar (API): R$ ${currentDollarAPI.toFixed(2).replace('.', ',')}`;
+        if (!isCatalog) {
+            currentDollarAPI = await getDollarRate();
+            if (dollarDisplay) {
+                dollarDisplay.textContent = `Cotação Dólar (API): R$ ${currentDollarAPI.toFixed(2).replace('.', ',')}`;
+            }
         }
 
         // Injetar o texto de termos no modal e na página principal
@@ -135,7 +137,7 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
     async function renderProducts(categoryFilter) {
         if (!productsGrid) return;
 
-        const products = await getProducts();
+        const products = isCatalog ? await getCatalogProducts() : await getProducts();
         productsGrid.innerHTML = '';
 
 
@@ -159,23 +161,37 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
         }
 
         // Sort by price ascending (cheapest first)
-        filteredProducts.sort((a, b) => a.priceUSD - b.priceUSD);
+        if (isCatalog) {
+            filteredProducts.sort((a, b) => (a.priceSNRaw || 0) - (b.priceSNRaw || 0));
+        } else {
+            filteredProducts.sort((a, b) => a.priceUSD - b.priceUSD);
+        }
 
         if (filteredProducts.length === 0) {
             productsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">Nenhum produto encontrado.</p>';
             return;
         }
 
-        const isCatalog = document.body.dataset.page === 'catalog';
-
         filteredProducts.forEach(product => {
-            const prices = getAppPrices(product.priceUSD, product.url);
+            let prices;
+            if (isCatalog) {
+                prices = {
+                    sn: product.priceSN,
+                    nf: product.priceNF,
+                    snRaw: product.priceSNRaw,
+                    nfRaw: product.priceNFRaw
+                };
+            } else {
+                prices = getAppPrices(product.priceUSD, product.url);
+            }
 
-
-            let origin = 'Outros';
-            if (product.url.includes('amazon.')) origin = 'US-AM';
-            else if (product.url.includes('bhphotovideo.com')) origin = 'US-BH';
-            else if (product.url.includes('comprasparaguai.com.br')) origin = 'MS';
+            let origin = '';
+            if (!isCatalog) {
+                origin = 'Outros';
+                if (product.url.includes('amazon.')) origin = 'US-AM';
+                else if (product.url.includes('bhphotovideo.com')) origin = 'US-BH';
+                else if (product.url.includes('comprasparaguai.com.br')) origin = 'MS';
+            }
 
 
 

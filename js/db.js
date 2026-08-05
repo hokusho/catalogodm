@@ -114,11 +114,30 @@ function sanitizeImageUrl(url) {
 
 async function getProducts() {
     try {
-        var response = await fetch(API_URL);
+        var response = await fetch(API_URL, {
+            headers: getAuthHeaders()
+        });
         if (!response.ok) {
             var errorData = await response.json().catch(function() { return {}; });
             var msg = errorData.error || 'Erro ao buscar produtos';
             showToast('Erro Banco Neon (GET): ' + msg, true);
+            return [];
+        }
+        var data = await response.json();
+        return Array.isArray(data) ? data : [];
+    } catch (err) {
+        showToast('Erro Conexão API: ' + err.message, true);
+        return [];
+    }
+}
+
+async function getCatalogProducts() {
+    try {
+        var response = await fetch(API_URL + '?catalog=true');
+        if (!response.ok) {
+            var errorData = await response.json().catch(function() { return {}; });
+            var msg = errorData.error || 'Erro ao buscar produtos';
+            showToast('Erro (GET catálogo): ' + msg, true);
             return [];
         }
         var data = await response.json();
@@ -230,64 +249,8 @@ function showToast(message, isError) {
     }, 3000);
 }
 
-// Fetch Dollar Rate
-async function getDollarRate() {
-    try {
-        var response = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
-        var data = await response.json();
-        return parseFloat(data.USDBRL.ask);
-    } catch (error) {
-        return 5.50; // Fallback value if API fails
-    }
-}
-
-// Global Price Calculation Helper
-function calculatePrices(priceUSD, url, dollarRate) {
-    if (!priceUSD || isNaN(priceUSD) || priceUSD <= 0) {
-        return {
-            sn: 'R$ 0,00',
-            nf: 'R$ 0,00',
-            snRaw: 0,
-            nfRaw: 0,
-            rule: 'Padrão'
-        };
-    }
-
-    var currentDollar = dollarRate || 5.00;
-    var snPrice, nfPrice, ruleName;
-
-    if (url && url.includes('comprasparaguai.com.br')) {
-        ruleName = 'Compras Paraguai';
-        // Regra Compras Paraguai: Dólar API + 0.20
-        var specialDollar = currentDollar + 0.20;
-        var baseValueBRL = priceUSD * specialDollar;
-
-        // SN: Preço de Custo + 36%
-        snPrice = baseValueBRL * 1.36;
-
-        // NF: 13% sobre o SN
-        nfPrice = snPrice * 1.13;
-    } else {
-        ruleName = 'Padrão (Amazon / B&H / Nissei)';
-        // Regra Padrão (Amazon / B&H / outros)
-        var safeDollar = currentDollar + 0.10;
-        var baseValueBRL = priceUSD * safeDollar * 1.113;
-        snPrice = baseValueBRL * 1.30;
-        nfPrice = snPrice * 1.13;
-    }
-
-    var formatCurrency = function(val) {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
-    };
-
-    return {
-        sn: formatCurrency(snPrice),
-        nf: formatCurrency(nfPrice),
-        snRaw: snPrice,
-        nfRaw: nfPrice,
-        rule: ruleName
-    };
-}
+// getDollarRate() and calculatePrices() moved to js/calc.js (admin-only)
+// For the catalog page, prices are calculated server-side via /api/products?catalog=true
 
 // Global Image Downloader & 300px WebP Optimizer
 async function downloadAndOptimizeImage(imageUrl) {
