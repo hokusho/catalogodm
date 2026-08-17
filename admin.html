@@ -116,30 +116,39 @@
                         </div>
 
                         <!-- Regra e Preço Lado a Lado -->
-                        <div style="display: flex; gap: 1rem; align-items: flex-end;">
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label>Regra</label>
+                        <div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+                            <div class="form-group" id="fixedPriceGroup" style="margin-bottom: 0;">
+                                <label for="fixedPriceCheck">Tipo de Preço</label>
+                                <label style="cursor: pointer; display: flex; align-items: center; gap: 0.6rem; height: 46px; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); border-radius: 8px; padding: 0 1rem; font-weight: 600; font-size: 0.95rem; user-select: none; margin-bottom: 0; box-sizing: border-box; color: var(--text-main);">
+                                    <input type="checkbox" id="fixedPriceCheck"
+                                        style="width: 18px; height: 18px; accent-color: var(--primary-color); cursor: pointer; margin: 0;">
+                                    Preço Fixo (R$)
+                                </label>
+                            </div>
+
+                            <div class="form-group" id="ruleGroup" style="margin-bottom: 0; transition: opacity 0.2s;">
+                                <label id="ruleGroupLabel">Regra de Importação</label>
                                 <div
-                                    style="display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem; height: 42px; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); border-radius: 8px; padding: 0 1rem;">
+                                    style="display: flex; gap: 1rem; align-items: center; height: 46px; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); border-radius: 8px; padding: 0 1rem; box-sizing: border-box;">
                                     <label
-                                        style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 0.95rem;">
+                                        style="cursor: pointer; display: flex; align-items: center; gap: 0.4rem; font-weight: 600; font-size: 0.95rem; margin-bottom: 0; color: var(--text-main);">
                                         <input type="radio" name="calcRule" value="standard" checked
-                                            style="width: 16px; height: 16px; accent-color: var(--primary-color); cursor: pointer;">
+                                            style="width: 16px; height: 16px; accent-color: var(--primary-color); cursor: pointer; margin: 0;">
                                         US
                                     </label>
                                     <label
-                                        style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 0.95rem;">
+                                        style="cursor: pointer; display: flex; align-items: center; gap: 0.4rem; font-weight: 600; font-size: 0.95rem; margin-bottom: 0; color: var(--text-main);">
                                         <input type="radio" name="calcRule" value="paraguai"
-                                            style="width: 16px; height: 16px; accent-color: var(--primary-color); cursor: pointer;">
+                                            style="width: 16px; height: 16px; accent-color: var(--primary-color); cursor: pointer; margin: 0;">
                                         MS
                                     </label>
                                 </div>
                             </div>
 
-                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                                <label for="productPriceUSD">Preço Base (USD)</label>
+                            <div class="form-group" style="flex: 1; min-width: 180px; margin-bottom: 0;">
+                                <label for="productPriceUSD" id="productPriceLabel">Preço Base (USD)</label>
                                 <input type="number" id="productPriceUSD" step="0.01" placeholder="Ex: 1000.00"
-                                    required>
+                                    style="height: 46px; border-radius: 8px; box-sizing: border-box;" required>
                             </div>
                         </div>
 

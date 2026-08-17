@@ -47,13 +47,22 @@ function calculatePrices(priceUSD, url, dollarRate) {
     var currentDollar = dollarRate || 5.00;
     var snPrice, nfPrice, ruleName;
 
-    if (url && url.includes('comprasparaguai.com.br')) {
+    // Regra 1: Preço Fixo (em Reais direto, sem cálculo de dólar)
+    if (url && (url.startsWith('fixed:') || url.includes('precofixo') || url === 'fixed')) {
+        ruleName = 'Preço Fixo (R$)';
+        snPrice = priceUSD;
+        nfPrice = snPrice * 1.13;
+    }
+    // Regra 2: Compras Paraguai (MS)
+    else if (url && url.includes('comprasparaguai.com.br')) {
         ruleName = 'Compras Paraguai';
         var specialDollar = currentDollar + 0.20;
         var baseValueBRL = priceUSD * specialDollar;
         snPrice = baseValueBRL * 1.36;
         nfPrice = snPrice * 1.13;
-    } else {
+    }
+    // Regra 3: Padrão US (Amazon / B&H / Nissei)
+    else {
         ruleName = 'Padrão (Amazon / B&H / Nissei)';
         var safeDollar = currentDollar + 0.10;
         var baseValueBRL = priceUSD * safeDollar * 1.113;
@@ -117,17 +126,30 @@ function createModalHTML() {
                         <option value="">(Nenhuma / Não se aplica)</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Origem / Regra de Cálculo de Preço</label>
-                    <select id="editRule">
-                        <option value="standard">Preços US (Amazon / B&H Photo)</option>
-                        <option value="paraguai">Compras Paraguai (MS)</option>
-                    </select>
+
+                <!-- Tipo de Preço e Regra de Cálculo -->
+                <div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap; margin-bottom: 1rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="editFixedPrice">Tipo de Preço</label>
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 0.6rem; height: 46px; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); border-radius: 8px; padding: 0 1rem; font-weight: 600; font-size: 0.95rem; user-select: none; margin-bottom: 0; box-sizing: border-box; color: var(--text-main);">
+                            <input type="checkbox" id="editFixedPrice"
+                                style="width: 18px; height: 18px; accent-color: var(--primary-color); cursor: pointer; margin: 0;">
+                            Preço Fixo (R$)
+                        </label>
+                    </div>
+
+                    <div class="form-group" id="editRuleGroup" style="flex: 1; min-width: 180px; margin-bottom: 0; transition: opacity 0.2s;">
+                        <label for="editRule">Regra de Importação</label>
+                        <select id="editRule" style="height: 46px; border-radius: 8px; box-sizing: border-box;">
+                            <option value="standard">Preços US (Amazon / B&H Photo)</option>
+                            <option value="paraguai">Compras Paraguai (MS)</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Preço Base (USD)</label>
-                    <input type="number" step="0.01" id="editPrice" required>
+                    <label id="editPriceLabel">Preço Base (USD)</label>
+                    <input type="number" step="0.01" id="editPrice" style="height: 46px; border-radius: 8px; box-sizing: border-box;" required>
                 </div>
 
                 <!-- Painel de Prévia do Preço Calculado (Edição) -->
@@ -179,6 +201,7 @@ function createModalHTML() {
     function updateEditPricePreview() {
         const priceInput = document.getElementById('editPrice');
         const ruleSelect = document.getElementById('editRule');
+        const fixedCheck = document.getElementById('editFixedPrice');
         const priceSNEl = document.getElementById('editPreviewPriceSN');
         const priceNFEl = document.getElementById('editPreviewPriceNF');
         const dollarRateEl = document.getElementById('editPreviewDollarRate');
@@ -186,15 +209,28 @@ function createModalHTML() {
 
         if (!priceInput || !priceSNEl || !priceNFEl) return;
 
+        const isFixed = fixedCheck && fixedCheck.checked;
+        const priceVal = parseFloat(priceInput.value);
+
+        if (isFixed) {
+            if (dollarRateEl) {
+                dollarRateEl.textContent = 'Preço Fixo: Sem conversão';
+            }
+            const prices = calculatePrices(priceVal, 'fixed', currentDollarAPI);
+            priceSNEl.textContent = prices.sn;
+            priceNFEl.textContent = prices.nf;
+            if (ruleTextEl) ruleTextEl.textContent = prices.rule;
+            return;
+        }
+
         if (dollarRateEl && typeof currentDollarAPI !== 'undefined' && currentDollarAPI) {
             dollarRateEl.textContent = `Dólar API: R$ ${currentDollarAPI.toFixed(2).replace('.', ',')}`;
         }
 
-        const priceUSD = parseFloat(priceInput.value);
         const ruleVal = ruleSelect ? ruleSelect.value : 'standard';
         const virtualUrl = (ruleVal === 'paraguai') ? 'comprasparaguai.com.br' : 'bhphotovideo.com';
 
-        const prices = calculatePrices(priceUSD, virtualUrl, typeof currentDollarAPI !== 'undefined' ? currentDollarAPI : 5.00);
+        const prices = calculatePrices(priceVal, virtualUrl, typeof currentDollarAPI !== 'undefined' ? currentDollarAPI : 5.00);
 
         priceSNEl.textContent = prices.sn;
         priceNFEl.textContent = prices.nf;
@@ -203,6 +239,26 @@ function createModalHTML() {
 
     const editPriceInput = document.getElementById('editPrice');
     const editRuleSelect = document.getElementById('editRule');
+    const editFixedCheck = document.getElementById('editFixedPrice');
+    const editRuleGroup = document.getElementById('editRuleGroup');
+    const editPriceLabel = document.getElementById('editPriceLabel');
+
+    if (editFixedCheck) {
+        editFixedCheck.addEventListener('change', () => {
+            const isFixed = editFixedCheck.checked;
+            if (editRuleGroup) {
+                editRuleGroup.style.opacity = isFixed ? '0.35' : '1';
+                editRuleGroup.style.pointerEvents = isFixed ? 'none' : 'auto';
+            }
+            if (editPriceLabel) {
+                editPriceLabel.textContent = isFixed ? 'Preço Fixo em Reais (R$)' : 'Preço Base (USD)';
+            }
+            if (editPriceInput) {
+                editPriceInput.placeholder = isFixed ? 'Ex: 2500.00 (em Reais)' : 'Ex: 1000.00';
+            }
+            updateEditPricePreview();
+        });
+    }
 
     if (editPriceInput) {
         editPriceInput.addEventListener('input', updateEditPricePreview);
@@ -254,17 +310,24 @@ function createModalHTML() {
             rawImage = await downloadAndOptimizeImage(rawImage);
         }
 
-        let url = document.getElementById('editUrl').value;
-        const selectedRule = document.getElementById('editRule').value;
+        const isFixed = document.getElementById('editFixedPrice')?.checked;
+        let url = document.getElementById('editUrl').value.trim();
 
-        // Garante que a regra escolhida fique marcada e persistida no banco Neon
-        if (selectedRule === 'paraguai') {
-            if (!url || !url.toLowerCase().includes('comprasparaguai')) {
-                url = 'https://comprasparaguai.com.br/' + (url ? url.replace(/^https?:\/\//i, '') : '');
+        if (isFixed) {
+            url = url ? (url.startsWith('fixed:') ? url : 'fixed:' + url) : 'fixed';
+        } else {
+            if (url.startsWith('fixed:')) {
+                url = url.replace(/^fixed:/i, '');
             }
-        } else if (selectedRule === 'standard') {
-            if (url && url.toLowerCase().includes('comprasparaguai')) {
-                url = 'https://bhphotovideo.com/' + url.replace(/^https?:\/\/(www\.)?comprasparaguai\.com\.br\/?/i, '');
+            const selectedRule = document.getElementById('editRule').value;
+            if (selectedRule === 'paraguai') {
+                if (!url || !url.toLowerCase().includes('comprasparaguai')) {
+                    url = 'https://comprasparaguai.com.br/' + (url ? url.replace(/^https?:\/\//i, '') : '');
+                }
+            } else if (selectedRule === 'standard') {
+                if (url && url.toLowerCase().includes('comprasparaguai')) {
+                    url = 'https://bhphotovideo.com/' + url.replace(/^https?:\/\/(www\.)?comprasparaguai\.com\.br\/?/i, '');
+                }
             }
         }
 
@@ -359,7 +422,15 @@ function openEditModal(product) {
     }
 
     document.getElementById('editId').value = product.id;
-    document.getElementById('editUrl').value = product.url;
+    
+    const isFixed = product.url && (product.url.startsWith('fixed:') || product.url.includes('precofixo') || product.url === 'fixed');
+    let cleanUrl = product.url || '';
+    if (cleanUrl.startsWith('fixed:')) {
+        cleanUrl = cleanUrl.replace(/^fixed:/i, '');
+        if (cleanUrl === 'fixed') cleanUrl = '';
+    }
+    document.getElementById('editUrl').value = cleanUrl;
+
     document.getElementById('editName').value = product.name;
     document.getElementById('editCategory').value = product.category;
 
@@ -382,6 +453,12 @@ function openEditModal(product) {
     document.getElementById('editPrice').value = product.priceUSD;
     document.getElementById('editImage').value = product.image;
     
+    const editFixedCheck = document.getElementById('editFixedPrice');
+    if (editFixedCheck) {
+        editFixedCheck.checked = isFixed;
+        editFixedCheck.dispatchEvent(new Event('change'));
+    }
+
     const editRuleSelect = document.getElementById('editRule');
     if (editRuleSelect) {
         if (product.url && product.url.includes('comprasparaguai')) {

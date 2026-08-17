@@ -18,20 +18,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let currentDollarAPI = 5.00;
 
+    const fixedPriceCheck = document.getElementById('fixedPriceCheck');
+    const ruleGroup = document.getElementById('ruleGroup');
+    const productPriceLabel = document.getElementById('productPriceLabel');
+
     // Função para atualizar a prévia de preços na tela de admin
     function updatePricePreview() {
         const priceSNEl = document.getElementById('previewPriceSN');
         const priceNFEl = document.getElementById('previewPriceNF');
         const dollarRateEl = document.getElementById('previewDollarRate');
-        const ruleEl = document.getElementById('previewRule');
 
         if (!priceInput || !priceSNEl || !priceNFEl) return;
+
+        const isFixed = fixedPriceCheck && fixedPriceCheck.checked;
+        const priceVal = parseFloat(priceInput.value);
+
+        if (isFixed) {
+            if (dollarRateEl) {
+                dollarRateEl.textContent = 'Preço Fixo: Sem conversão';
+            }
+            const prices = calculatePrices(priceVal, 'fixed', currentDollarAPI);
+            priceSNEl.textContent = prices.sn;
+            priceNFEl.textContent = prices.nf;
+            return;
+        }
 
         if (dollarRateEl && currentDollarAPI) {
             dollarRateEl.textContent = `Dólar API: R$ ${currentDollarAPI.toFixed(2).replace('.', ',')}`;
         }
 
-        const priceUSD = parseFloat(priceInput.value);
         let urlForCalc = urlInput ? urlInput.value : '';
 
         const ruleRadios = document.getElementsByName('calcRule');
@@ -44,11 +59,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        const prices = calculatePrices(priceUSD, urlForCalc, currentDollarAPI);
+        const prices = calculatePrices(priceVal, urlForCalc, currentDollarAPI);
 
         priceSNEl.textContent = prices.sn;
         priceNFEl.textContent = prices.nf;
-        if (ruleEl) ruleEl.textContent = prices.rule;
     }
 
     // Busca o dólar atual e atualiza a prévia inicial
@@ -56,6 +70,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     updatePricePreview();
 
     // Event listeners para atualização em tempo real no cadastro
+    if (fixedPriceCheck) {
+        fixedPriceCheck.addEventListener('change', () => {
+            const isFixed = fixedPriceCheck.checked;
+            if (ruleGroup) {
+                ruleGroup.style.opacity = isFixed ? '0.35' : '1';
+                ruleGroup.style.pointerEvents = isFixed ? 'none' : 'auto';
+            }
+            const ruleRadios = document.getElementsByName('calcRule');
+            if (ruleRadios) {
+                ruleRadios.forEach(r => r.disabled = isFixed);
+            }
+            if (productPriceLabel) {
+                productPriceLabel.textContent = isFixed ? 'Preço Fixo em Reais (R$)' : 'Preço Base (USD)';
+            }
+            if (priceInput) {
+                priceInput.placeholder = isFixed ? 'Ex: 2500.00 (em Reais)' : 'Ex: 1000.00';
+            }
+            updatePricePreview();
+        });
+    }
+
     if (priceInput) {
         priceInput.addEventListener('input', updatePricePreview);
         priceInput.addEventListener('change', updatePricePreview);
@@ -73,6 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (urlInput && ruleRadios && ruleRadios.length > 0) {
         urlInput.addEventListener('input', () => {
+            if (fixedPriceCheck && fixedPriceCheck.checked) return;
             const val = urlInput.value.toLowerCase();
             if (val.includes('comprasparaguai.com.br')) {
                 ruleRadios[1].checked = true;
@@ -527,6 +563,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (previewImg) previewImg.src = '';
         if (previewContainer) previewContainer.style.display = 'none';
         if (bGroup2) bGroup2.style.display = 'none';
+        if (fixedPriceCheck) {
+            fixedPriceCheck.checked = false;
+            fixedPriceCheck.dispatchEvent(new Event('change'));
+        }
         if (ruleRadios && ruleRadios.length > 0) ruleRadios[0].checked = true;
 
         updatePricePreview();
@@ -536,7 +576,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         productForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const url = document.getElementById('productUrl').value;
+            const isFixed = fixedPriceCheck && fixedPriceCheck.checked;
+            let finalUrl = document.getElementById('productUrl').value.trim();
             const name = document.getElementById('productName').value;
             const category = document.getElementById('productCategory').value;
             let brand = document.getElementById('productBrand').value;
@@ -547,13 +588,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             const priceUSD = parseFloat(document.getElementById('productPriceUSD').value);
             const image = document.getElementById('productImage').value;
 
-            if (!name || !category || !priceUSD || !image) {
+            if (!name || !category || isNaN(priceUSD) || !image) {
                 showToast("Preencha todos os campos obrigatórios.", true);
                 return;
             }
 
+            if (isFixed) {
+                finalUrl = finalUrl ? (finalUrl.startsWith('fixed:') ? finalUrl : 'fixed:' + finalUrl) : 'fixed';
+            } else {
+                if (finalUrl.startsWith('fixed:')) {
+                    finalUrl = finalUrl.replace(/^fixed:/i, '');
+                }
+                const ruleRadios = document.getElementsByName('calcRule');
+                const selectedRule = ruleRadios && Array.from(ruleRadios).find(r => r.checked)?.value;
+                if (selectedRule === 'paraguai') {
+                    if (!finalUrl || !finalUrl.toLowerCase().includes('comprasparaguai')) {
+                        finalUrl = 'https://comprasparaguai.com.br/' + (finalUrl ? finalUrl.replace(/^https?:\/\//i, '') : '');
+                    }
+                } else {
+                    if (finalUrl && finalUrl.toLowerCase().includes('comprasparaguai')) {
+                        finalUrl = 'https://bhphotovideo.com/' + finalUrl.replace(/^https?:\/\/(www\.)?comprasparaguai\.com\.br\/?/i, '');
+                    }
+                }
+            }
+
             const product = {
-                url,
+                url: finalUrl,
                 name,
                 category,
                 brand,

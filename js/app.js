@@ -187,9 +187,13 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
                 prices = getAppPrices(product.priceUSD, product.url);
             }
 
+            const isFixed = product.url && (product.url.startsWith('fixed:') || product.url.includes('precofixo') || product.url === 'fixed');
             const adminInfoHTML = !isCatalog ? `
-                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.8rem; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">
-                    <span><strong>Base:</strong> $${(product.priceUSD || 0).toFixed(2)}</span>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.8rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">
+                    <span><strong>${isFixed ? 'Preço Fixo:' : 'Base:'}</strong> ${isFixed ? 'R$ ' + (product.priceUSD || 0).toFixed(2).replace('.', ',') : '$' + (product.priceUSD || 0).toFixed(2)}</span>
+                    <span style="font-weight: 700; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: ${isFixed ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 107, 0, 0.15)'}; color: ${isFixed ? '#22c55e' : 'var(--primary-color)'}; border: 1px solid ${isFixed ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255, 107, 0, 0.3)'};">
+                        ${isFixed ? 'FIXO (R$)' : (product.url && product.url.includes('comprasparaguai') ? 'MS' : 'US')}
+                    </span>
                 </div>
             ` : '';
 

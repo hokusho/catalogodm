@@ -56,7 +56,10 @@ function serverCalculatePrices(priceUSD, url, dollarRate) {
     var currentDollar = dollarRate || 5.00;
     var snPrice, nfPrice;
 
-    if (url && url.includes('comprasparaguai.com.br')) {
+    if (url && (url.startsWith('fixed:') || url.includes('precofixo') || url === 'fixed')) {
+        snPrice = priceUSD;
+        nfPrice = snPrice * 1.13;
+    } else if (url && url.includes('comprasparaguai.com.br')) {
         var specialDollar = currentDollar + 0.20;
         var baseValueBRL = priceUSD * specialDollar;
         snPrice = baseValueBRL * 1.36;
