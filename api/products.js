@@ -14,15 +14,39 @@ async function getServerDollarRate() {
     if (cachedDollarRate && (now - dollarRateFetchedAt) < DOLLAR_CACHE_MS) {
         return cachedDollarRate;
     }
-    try {
-        const res = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
-        const data = await res.json();
-        cachedDollarRate = parseFloat(data.USDBRL.ask);
-        dollarRateFetchedAt = now;
-        return cachedDollarRate;
-    } catch (error) {
-        return cachedDollarRate || 5.50;
+
+    const providers = [
+        async function() {
+            const res = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL', {
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+            });
+            const data = await res.json();
+            return parseFloat(data.USDBRL.ask);
+        },
+        async function() {
+            const res = await fetch('https://open.er-api.com/v6/latest/USD');
+            const data = await res.json();
+            return parseFloat(data.rates.BRL);
+        },
+        async function() {
+            const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+            const data = await res.json();
+            return parseFloat(data.rates.BRL);
+        }
+    ];
+
+    for (var i = 0; i < providers.length; i++) {
+        try {
+            var rate = await providers[i]();
+            if (rate && !isNaN(rate) && rate > 0) {
+                cachedDollarRate = rate;
+                dollarRateFetchedAt = now;
+                return cachedDollarRate;
+            }
+        } catch (e) {}
     }
+
+    return cachedDollarRate || 5.21;
 }
 
 function serverCalculatePrices(priceUSD, url, dollarRate) {
@@ -182,6 +206,8 @@ module.exports = async function handler(req, res) {
                         name: p.name,
                         category: p.category,
                         brand: p.brand || '',
+                        priceUSD: p.priceUSD,
+                        url: p.url,
                         image: p.image,
                         priceSN: prices.sn,
                         priceNF: prices.nf,

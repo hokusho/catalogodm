@@ -5,13 +5,31 @@
 
 // Fetch Dollar Rate from API
 async function getDollarRate() {
-    try {
-        var response = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
-        var data = await response.json();
-        return parseFloat(data.USDBRL.ask);
-    } catch (error) {
-        return 5.50;
+    const providers = [
+        async function() {
+            const res = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
+            const data = await res.json();
+            return parseFloat(data.USDBRL.ask);
+        },
+        async function() {
+            const res = await fetch('https://open.er-api.com/v6/latest/USD');
+            const data = await res.json();
+            return parseFloat(data.rates.BRL);
+        },
+        async function() {
+            const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+            const data = await res.json();
+            return parseFloat(data.rates.BRL);
+        }
+    ];
+
+    for (var i = 0; i < providers.length; i++) {
+        try {
+            var rate = await providers[i]();
+            if (rate && !isNaN(rate) && rate > 0) return rate;
+        } catch (e) {}
     }
+    return 5.21;
 }
 
 // Price Calculation Helper (used for real-time preview in admin/edit forms)

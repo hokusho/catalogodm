@@ -44,11 +44,11 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
 
     // Initialize
     async function init() {
-        if (!isCatalog) {
+        if (typeof getDollarRate === 'function') {
             currentDollarAPI = await getDollarRate();
-            if (dollarDisplay) {
-                dollarDisplay.textContent = `Cotação Dólar (API): R$ ${currentDollarAPI.toFixed(2).replace('.', ',')}`;
-            }
+        }
+        if (dollarDisplay && !isCatalog) {
+            dollarDisplay.textContent = `Cotação Dólar (API): R$ ${currentDollarAPI.toFixed(2).replace('.', ',')}`;
         }
 
         // Injetar o texto de termos no modal e na página principal
@@ -94,9 +94,9 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
         }
     }
 
-    // Calculation logic uses calculatePrices from db.js with currentDollarAPI
+    // Calculation logic uses calculatePrices from calc.js with currentDollarAPI
     function getAppPrices(priceUSD, url) {
-        if (!currentDollarAPI) return { sn: 'Carregando...', nf: 'Carregando...' };
+        if (!currentDollarAPI) return { sn: 'Carregando...', nf: 'Carregando...', snRaw: 0, nfRaw: 0 };
         return calculatePrices(priceUSD, url, currentDollarAPI);
     }
 
@@ -161,11 +161,11 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
         }
 
         // Sort by price ascending (cheapest first)
-        if (isCatalog) {
-            filteredProducts.sort((a, b) => (a.priceSNRaw || 0) - (b.priceSNRaw || 0));
-        } else {
-            filteredProducts.sort((a, b) => a.priceUSD - b.priceUSD);
-        }
+        filteredProducts.sort((a, b) => {
+            const priceA = a.priceUSD && typeof calculatePrices === 'function' ? (getAppPrices(a.priceUSD, a.url).snRaw || 0) : (a.priceSNRaw || 0);
+            const priceB = b.priceUSD && typeof calculatePrices === 'function' ? (getAppPrices(b.priceUSD, b.url).snRaw || 0) : (b.priceSNRaw || 0);
+            return priceA - priceB;
+        });
 
         if (filteredProducts.length === 0) {
             productsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">Nenhum produto encontrado.</p>';
@@ -174,7 +174,9 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
 
         filteredProducts.forEach(product => {
             let prices;
-            if (isCatalog) {
+            if (product.priceUSD && typeof calculatePrices === 'function') {
+                prices = getAppPrices(product.priceUSD, product.url);
+            } else if (isCatalog && product.priceSN) {
                 prices = {
                     sn: product.priceSN,
                     nf: product.priceNF,
@@ -187,7 +189,7 @@ os prazos de entrega podem variar de acordo com o produto.<br><br>
 
             const adminInfoHTML = !isCatalog ? `
                 <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.8rem; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">
-                    <span><strong>Base:</strong> $${product.priceUSD.toFixed(2)}</span>
+                    <span><strong>Base:</strong> $${(product.priceUSD || 0).toFixed(2)}</span>
                 </div>
             ` : '';
 

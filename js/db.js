@@ -3,6 +3,13 @@ var API_URL = '/api/products';
 var AUTH_API_URL = '/api/auth';
 var AUTH_TOKEN_KEY = 'catalogodm_auth_token';
 
+function isLocalEnvironment() {
+    return window.location.hostname === 'localhost' || 
+           window.location.hostname === '127.0.0.1' || 
+           window.location.hostname === '' || 
+           window.location.protocol === 'file:';
+}
+
 // ========== Auth Helpers ==========
 
 function getAuthToken() {
@@ -26,31 +33,64 @@ function getAuthHeaders() {
 }
 
 async function loginAdmin(user, password) {
-    var response = await fetch(AUTH_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user: user, password: password })
-    });
-    if (!response.ok) {
-        var data = await response.json().catch(function() { return {}; });
-        throw new Error(data.error || 'Credenciais inválidas');
+    var u = (user || '').trim();
+    var p = (password || '').trim();
+
+    try {
+        var response = await fetch(AUTH_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user: u, password: p })
+        });
+        if (response.ok) {
+            var data = await response.json();
+            setAuthToken(data.token);
+            return true;
+        }
+        if (response.status === 401 && !isLocalEnvironment()) {
+            var data = await response.json().catch(function() { return {}; });
+            throw new Error(data.error || 'Credenciais inválidas');
+        }
+    } catch (err) {
+        if (!isLocalEnvironment()) {
+            throw err;
+        }
     }
-    var data = await response.json();
-    setAuthToken(data.token);
-    return true;
+
+    // Fallback para ambiente de desenvolvimento local (Live Server / file://)
+    if (isLocalEnvironment()) {
+        if ((u.toLowerCase() === 'admin' && (p === 'dm2024admin' || p === 'admin' || p === '123456')) || p === 'dm2024admin') {
+            setAuthToken('local-dev-token');
+            return true;
+        }
+        throw new Error('Credenciais incorretas (Ambiente local: admin / dm2024admin)');
+    }
+
+    throw new Error('Credenciais inválidas');
 }
 
 async function validateToken() {
     var token = getAuthToken();
     if (!token) return false;
+
+    if (isLocalEnvironment() && token === 'local-dev-token') {
+        return true;
+    }
+
     try {
         var response = await fetch(AUTH_API_URL, {
             headers: { 'Authorization': 'Bearer ' + token }
         });
         if (response.ok) return true;
+        if (isLocalEnvironment() && token === 'local-dev-token') {
+            return true;
+        }
         clearAuthToken();
         return false;
     } catch (e) {
+        if (isLocalEnvironment() && token === 'local-dev-token') {
+            return true;
+        }
         return false;
     }
 }
@@ -63,6 +103,30 @@ function setupLoginModal() {
 
     if (loginModal) loginModal.classList.add('active');
     if (protectedContent) protectedContent.style.display = 'none';
+
+    // Adiciona botão/aviso de acesso rápido se for ambiente local
+    if (isLocalEnvironment() && loginForm && !document.getElementById('localDevBypassBtn')) {
+        var localDevDiv = document.createElement('div');
+        localDevDiv.style.marginTop = '1rem';
+        localDevDiv.style.padding = '0.75rem';
+        localDevDiv.style.background = 'rgba(255, 255, 255, 0.05)';
+        localDevDiv.style.borderRadius = '8px';
+        localDevDiv.style.textAlign = 'center';
+        localDevDiv.innerHTML = `
+            <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">🔧 Ambiente Local Detectado</span>
+            <button type="button" id="localDevBypassBtn" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 0.5rem;">
+                Entrar Direto (Modo Local)
+            </button>
+        `;
+        loginForm.parentNode.appendChild(localDevDiv);
+
+        document.getElementById('localDevBypassBtn').addEventListener('click', function() {
+            setAuthToken('local-dev-token');
+            if (loginModal) loginModal.classList.remove('active');
+            if (protectedContent) protectedContent.style.display = '';
+            window.location.reload();
+        });
+    }
 
     if (loginForm) {
         loginForm.addEventListener('submit', async function(e) {
@@ -81,7 +145,7 @@ function setupLoginModal() {
                 window.location.reload();
             } catch (err) {
                 if (loginError) {
-                    loginError.textContent = 'Usuário ou senha incorretos';
+                    loginError.textContent = err.message || 'Usuário ou senha incorretos';
                     loginError.style.display = 'block';
                 }
                 if (submitBtn) {
