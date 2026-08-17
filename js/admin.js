@@ -31,7 +31,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!priceInput || !priceSNEl || !priceNFEl) return;
 
         const isFixed = fixedPriceCheck && fixedPriceCheck.checked;
-        const priceVal = parseFloat(priceInput.value);
+        const rawVal = (priceInput.value || '').replace(',', '.');
+        const priceVal = parseFloat(rawVal);
 
         if (isFixed) {
             if (dollarRateEl) {
@@ -92,12 +93,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (priceInput) {
-        priceInput.addEventListener('input', updatePricePreview);
-        priceInput.addEventListener('change', updatePricePreview);
+        ['input', 'change', 'keyup', 'paste'].forEach(evt => {
+            priceInput.addEventListener(evt, updatePricePreview);
+        });
     }
     if (urlInput) {
-        urlInput.addEventListener('input', updatePricePreview);
-        urlInput.addEventListener('change', updatePricePreview);
+        ['input', 'change', 'keyup', 'paste'].forEach(evt => {
+            urlInput.addEventListener(evt, updatePricePreview);
+        });
     }
     const ruleRadios = document.getElementsByName('calcRule');
     if (ruleRadios && ruleRadios.length > 0) {

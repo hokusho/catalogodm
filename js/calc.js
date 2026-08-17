@@ -210,13 +210,14 @@ function createModalHTML() {
         if (!priceInput || !priceSNEl || !priceNFEl) return;
 
         const isFixed = fixedCheck && fixedCheck.checked;
-        const priceVal = parseFloat(priceInput.value);
+        const rawVal = (priceInput.value || '').replace(',', '.');
+        const priceVal = parseFloat(rawVal);
 
         if (isFixed) {
             if (dollarRateEl) {
                 dollarRateEl.textContent = 'Preço Fixo: Sem conversão';
             }
-            const prices = calculatePrices(priceVal, 'fixed', currentDollarAPI);
+            const prices = calculatePrices(priceVal, 'fixed', typeof currentDollarAPI !== 'undefined' ? currentDollarAPI : 5.21);
             priceSNEl.textContent = prices.sn;
             priceNFEl.textContent = prices.nf;
             if (ruleTextEl) ruleTextEl.textContent = prices.rule;
@@ -230,12 +231,13 @@ function createModalHTML() {
         const ruleVal = ruleSelect ? ruleSelect.value : 'standard';
         const virtualUrl = (ruleVal === 'paraguai') ? 'comprasparaguai.com.br' : 'bhphotovideo.com';
 
-        const prices = calculatePrices(priceVal, virtualUrl, typeof currentDollarAPI !== 'undefined' ? currentDollarAPI : 5.00);
+        const prices = calculatePrices(priceVal, virtualUrl, typeof currentDollarAPI !== 'undefined' ? currentDollarAPI : 5.21);
 
         priceSNEl.textContent = prices.sn;
         priceNFEl.textContent = prices.nf;
         if (ruleTextEl) ruleTextEl.textContent = prices.rule;
     }
+    window.updateEditPricePreview = updateEditPricePreview;
 
     const editPriceInput = document.getElementById('editPrice');
     const editRuleSelect = document.getElementById('editRule');
@@ -261,8 +263,9 @@ function createModalHTML() {
     }
 
     if (editPriceInput) {
-        editPriceInput.addEventListener('input', updateEditPricePreview);
-        editPriceInput.addEventListener('change', updateEditPricePreview);
+        ['input', 'change', 'keyup', 'paste'].forEach(evt => {
+            editPriceInput.addEventListener(evt, updateEditPricePreview);
+        });
     }
     if (editRuleSelect) {
         editRuleSelect.addEventListener('change', updateEditPricePreview);
@@ -476,6 +479,10 @@ function openEditModal(product) {
     const editPriceInput = document.getElementById('editPrice');
     if (editPriceInput) {
         editPriceInput.dispatchEvent(new Event('input'));
+    }
+
+    if (typeof updateEditPricePreview === 'function') {
+        updateEditPricePreview();
     }
 
     document.getElementById('editModal').classList.add('active');
